@@ -29,6 +29,11 @@ public class GearQueueConsumerOptionsValidator
             {
                 errors.Add("Batch time limit must be greater than zero");
             }
+
+            if (options.ConcurrencyStrategy is not ConcurrencyStrategy.AcrossServers)
+            {
+                errors.Add("Concurrency strategy must be AcrossServers when batching is enabled");
+            }
         }
 
         foreach (var connectionPoolSettings in options.Servers)

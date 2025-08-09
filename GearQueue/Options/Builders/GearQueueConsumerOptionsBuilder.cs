@@ -58,6 +58,30 @@ public class GearQueueConsumerOptionsBuilder
 
         return this;
     }
+
+    public GearQueueConsumerOptionsBuilder WithConcurrencyAcrossServers(int concurrency)
+    {
+        _options.MaxConcurrency = concurrency;
+        _options.ConcurrencyStrategy = ConcurrencyStrategy.AcrossServers;
+
+        return this;
+    }
+    
+    public GearQueueConsumerOptionsBuilder WithConcurrencyPerConnection(int concurrency)
+    {
+        _options.MaxConcurrency = concurrency;
+        _options.ConcurrencyStrategy = ConcurrencyStrategy.PerConnection;
+
+        return this;
+    }
+    
+    public GearQueueConsumerOptionsBuilder WithConcurrencyPerServer(int concurrency)
+    {
+        _options.MaxConcurrency = concurrency;
+        _options.ConcurrencyStrategy = ConcurrencyStrategy.PerServer;
+
+        return this;
+    }
     
     internal GearQueueConsumerOptions Build()
     {

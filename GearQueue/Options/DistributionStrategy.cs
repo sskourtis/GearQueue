@@ -1,4 +1,4 @@
-namespace GearQueue.Producer;
+namespace GearQueue.Options;
 
 public enum DistributionStrategy
 {

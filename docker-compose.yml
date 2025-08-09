@@ -1,0 +1,12 @@
+services:
+
+    gearman_primary:
+        image: skourtisarx/gearman:1.1.21
+        ports:
+            - "4731:4730"
+
+    gearman_secondary:
+        image: skourtisarx/gearman:1.1.21
+        ports:
+            - "4732:4730"
+

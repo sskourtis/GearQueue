@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>dotnet-WorkerExample-7e807308-d6ef-4673-9589-78b71c0a71bd</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5"/>
+        <PackageReference Include="Serilog" Version="4.3.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\GearQueue.Extensions.Microsoft.DependencyInjection\GearQueue.Extensions.Microsoft.DependencyInjection.csproj" />
+      <ProjectReference Include="..\..\GearQueue\GearQueue.csproj" />
+      <ProjectReference Include="..\SampleUtils\SampleUtils.csproj" />
+    </ItemGroup>
+</Project>

@@ -21,7 +21,7 @@ internal static partial class LogMessages
         string function);
     
     [LoggerMessage(
-        Message = "Couldn't not activate handler{Type} for {Function}",
+        Message = "Couldn't not activate handler {Type} for {Function}",
         Level = LogLevel.Error)]
     internal static partial void LogHandlerTypeCreationFailure(
         this ILogger logger,
@@ -72,14 +72,25 @@ internal static partial class LogMessages
         SocketException exception);
 
     [LoggerMessage(
-        Message = "Starting consumer to {Host} and {Port} with {Concurrency} for {Functions}",
+        Message = "Starting consumer to {Host} and {Port} with {Concurrency} for {Function}",
         Level = LogLevel.Information)]
     internal static partial void LogStartingConsumer(
         this ILogger logger,
         string host,
         int port,
         int concurrency,
-        IEnumerable<string> functions
+        string function
+    );
+    
+    [LoggerMessage(
+        Message = "Starting consumer {Connections} to {Host} and {Port} with for {Function}",
+        Level = LogLevel.Information)]
+    internal static partial void LogStartingBatchConsumer(
+        this ILogger logger,
+        int connections,
+        string host,
+        int port,
+        string function
     );
 
     [LoggerMessage(

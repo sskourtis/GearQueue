@@ -12,15 +12,15 @@ public class InvocationsTracker
     /// 
     /// </summary>
     /// <returns></returns>
-    public (int Invocations, double? PerSecond) InvokeAndGetInvocations()
+    public (int Invocations, double? PerSecond) InvokeAndGetInvocations(int count = 1)
     {
         long elapsed;
         int invocationsSinceLastTimeThreshold, total;
 
         lock (_stopwatch)
         {
-            _totalCounter++;
-            _sinceLastSecondCounter++;
+            _totalCounter += count;
+            _sinceLastSecondCounter += count;
 
             total = _totalCounter;
             invocationsSinceLastTimeThreshold = _sinceLastSecondCounter;

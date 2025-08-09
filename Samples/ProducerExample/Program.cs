@@ -9,6 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 builder.Services.AddGearQueueProducer(builder.Configuration);
+builder.Services.AddGearQueueProducer(builder.Configuration.GetSection("GearQueue:ProducerA"), "primary");
+builder.Services.AddGearQueueProducer(builder.Configuration.GetSection("GearQueue:ProducerB"), "secondary");
 
 builder.Services.AddSingleton<JobCounter>();
 
@@ -25,7 +27,29 @@ app.UseHttpsRedirection();
 app.MapGet("/test", () => Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}") )
     .WithName("Test");
 
-app.MapGet("/produce", async (GearQueueProducer producer, JobCounter counter) =>
+app.MapGet("/produce/{name}", async (IGearQueueProducerFactory factory, JobCounter counter, string name) =>
+    {
+        var producer = factory.Get(name);
+
+        if (producer == null)
+        {
+            return Results.BadRequest($"Invalid name {name}");
+        }
+        
+        var result = await producer.Produce("test-function", Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}"));
+
+        if (result)
+        {
+            counter.Increment();
+            
+            return Results.Ok("Ok");
+        }
+
+        return Results.InternalServerError();
+    })
+    .WithName("Produce from factory");
+
+app.MapGet("/produce", async (IGearQueueProducer producer, JobCounter counter) =>
     {
         var result = await producer.Produce("test-function", Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}"));
 
@@ -40,22 +64,28 @@ app.MapGet("/produce", async (GearQueueProducer producer, JobCounter counter) =>
     })
     .WithName("Produce");
 
-app.MapGet("/status", (GearQueueProducer producer, JobCounter counter) =>
+app.MapGet("/produce-random", async (IGearQueueProducer producer, JobCounter counter) =>
     {
-        var metrics = producer.Metrics;
-        
+        var result = await producer.Produce(Random.Shared.Next(10) > 5 
+            ? "test-function"
+            : "test-secondary-function", Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}"));
+
+        if (result)
+        {
+            counter.Increment();
+            
+            return Results.Ok("Ok");
+        }
+
+        return Results.InternalServerError();
+    })
+    .WithName("Produce Random");
+
+app.MapGet("/status", (IGearQueueProducer producer, JobCounter counter) =>
+    {
         return Task.FromResult(new
         {
             Coutner = counter.Get(),
-            metrics.ExpiredConnections,
-            metrics.CleanedConnections,
-            metrics.CleanupErrors,
-            metrics.CleanupRuns,
-            metrics.ConnectionErrors,
-            metrics.ConnectionsCreated,
-            metrics.ConnectionsDiscarded,
-            metrics.ConnectionsReturned,
-            metrics.ConnectionsReused
         });
     })
     .WithName("Status");

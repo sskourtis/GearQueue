@@ -11,7 +11,7 @@ public class GearQueueMicrosoftScopedHandlerExecutor(
     {
         var scope = serviceScopeFactory.CreateScope();
         
-        if (scope.ServiceProvider.GetService(handlerType) is not IGearQueueConsumerHandler handler)
+        if (scope.ServiceProvider.GetService(handlerType) is not IGearQueueHandler handler)
         {
             return (false, null);
         }

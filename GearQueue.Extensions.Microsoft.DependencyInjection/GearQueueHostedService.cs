@@ -3,7 +3,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection;
 
-public class GearQueueHostedService(GearQueueConsumer consumer) : BackgroundService
+public class GearQueueHostedService<T>(IGearQueueConsumer consumer) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

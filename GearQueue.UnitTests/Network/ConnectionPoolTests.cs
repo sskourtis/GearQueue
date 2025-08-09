@@ -1,4 +1,5 @@
 using GearQueue.Network;
+using GearQueue.Options;
 using GearQueue.Utils;
 using Microsoft.Extensions.Logging;
 using NSubstitute;

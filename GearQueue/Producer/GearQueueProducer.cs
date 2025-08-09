@@ -1,12 +1,18 @@
 using System.Net.Sockets;
 using GearQueue.Logging;
 using GearQueue.Network;
+using GearQueue.Options;
 using GearQueue.Protocol;
 using GearQueue.Protocol.Request;
 using Microsoft.Extensions.Logging;
 using TimeProvider = GearQueue.Utils.TimeProvider;
 
 namespace GearQueue.Producer;
+
+public interface INamedGearQueueProducer : IGearQueueProducer
+{
+    string Name { get; init; }
+}
 
 public interface IGearQueueProducer
 {
@@ -20,7 +26,7 @@ public interface IGearQueueProducer
     Task<bool> Produce(string functionName, byte[] data, CancellationToken cancellationToken = default);
 }
 
-public class GearQueueProducer : IDisposable
+public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueueProducer
 {
     private bool _disposed = false;
     private readonly ILogger _logger;
@@ -30,6 +36,8 @@ public class GearQueueProducer : IDisposable
     private int _distributionStrategyCounter = 0;
 
     public ConnectionPoolMetrics Metrics => _connectionPools.First().Metrics;
+    
+    public required string Name { get; init; }
 
     public GearQueueProducer(GearQueueProducerOptions options, ILoggerFactory loggerFactory)
     {
@@ -37,7 +45,7 @@ public class GearQueueProducer : IDisposable
         _options = options;
         _connectionPools = options.Servers
             .Select(x => new ConnectionPool(x, loggerFactory, new ConnectionFactory(), new TimeProvider()))
-            .ToArray();
+            .ToArray<IConnectionPool>();
     }
     
     internal GearQueueProducer(GearQueueProducerOptions options, ILoggerFactory loggerFactory, IConnectionPoolFactory connectionPoolFactory)

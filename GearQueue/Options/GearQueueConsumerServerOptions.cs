@@ -1,6 +1,6 @@
 using GearQueue.Network;
 
-namespace GearQueue.Consumer;
+namespace GearQueue.Options;
 
 public sealed class GearQueueConsumerServerOptions
 {
@@ -13,12 +13,12 @@ public sealed class GearQueueConsumerServerOptions
     /// Defines the number of parallel jobs to be executed in parallel.
     /// Each extra consumer will create its own connection to the gearman job server
     /// </summary>
-    public int Concurrency { get; init; } = 1;
+    public int Connections { get; set; } = 1;
     
     /// <summary>
     /// Timeout between reconnection attempts when the TCP connection is dead
     /// </summary>
-    public TimeSpan ReconnectTimeout { get; init; } = TimeSpan.FromSeconds(3);
+    public TimeSpan ReconnectTimeout { get; set; } = TimeSpan.FromSeconds(3);
     
     /// <summary>
     /// When enabled, the consumer will be immediately notified by the gearman job server when new jobs
@@ -26,25 +26,25 @@ public sealed class GearQueueConsumerServerOptions
     ///
     /// Default: true
     /// </summary>
-    public bool UsePreSleep { get; init; } = true;
+    public bool UsePreSleep { get; set; } = true;
     
     /// <summary>
     /// When UsePreSleep is false, this value is used for the delay between polling attempts for new jobs
     /// </summary>
-    public TimeSpan PollingDelay { get; init; } = TimeSpan.FromSeconds(1);
+    public TimeSpan PollingDelay { get; set; } = TimeSpan.FromSeconds(1);
    
     /// <summary>
     /// Socket connection timeout
     /// </summary>
-    public TimeSpan ConnectionTimeout { get; init; } = TimeSpan.FromSeconds(5);
+    public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(5);
     
     /// <summary>
     /// Socket receive packet timeout
     /// </summary>
-    public TimeSpan ReceiveTimeout { get; init; } = TimeSpan.FromMinutes(1);
+    public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromMinutes(1);
     
     /// <summary>
     /// Socket send packet timeout
     /// </summary>
-    public TimeSpan SendTimeout { get; init; } = TimeSpan.FromSeconds(3);
+    public TimeSpan SendTimeout { get; set; } = TimeSpan.FromSeconds(3);
 }

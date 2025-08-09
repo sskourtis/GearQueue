@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using GearQueue.Options;
 using GearQueue.Utils;
 using Microsoft.Extensions.Logging;
 
@@ -70,8 +71,9 @@ internal class ConnectionPool : IDisposable, IConnectionPool
     /// </summary>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A connection to the configured host.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the connection pool is full.</exception>
+    /// <exception cref="Exception">Thrown when the connection pool is full and busy</exception>
     /// <exception cref="ObjectDisposedException">Thrown when the pool has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when cancellation is requested</exception>
     public async Task<IConnection> Get(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
@@ -81,7 +83,7 @@ internal class ConnectionPool : IDisposable, IConnectionPool
                 .ConfigureAwait(false))
         {
             // TODO use custom exception?
-            throw new OperationCanceledException("Connection pool is full, no free connection could be retrieved");
+            throw new Exception("Connection pool is full and busy, no free connection could be retrieved in reasonable time");
         }
 
         cancellationToken.ThrowIfCancellationRequested();

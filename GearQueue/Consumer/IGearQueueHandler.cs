@@ -1,6 +1,6 @@
 namespace GearQueue.Consumer;
 
-public interface IGearQueueConsumerHandler
+public interface IGearQueueHandler : IGearQueueBaseHandler
 {
     Task<JobStatus> Consume(JobContext job);
 }

@@ -1,4 +1,6 @@
-namespace GearQueue.Network;
+using GearQueue.Network;
+
+namespace GearQueue.Options;
 
 public class ConnectionPoolOptions
 {
@@ -20,30 +22,30 @@ public class ConnectionPoolOptions
     /// <summary>
     /// Gearman job server connection info
     /// </summary>
-    public required ServerInfo ServerInfo { get; init; }
+    public required ServerInfo ServerInfo { get; set; }
     
     /// <summary>
     /// The error threshold after which the pool is marked as unhealthy (Default 5)
     /// </summary>
-    public int HealthErrorThreshold { get; init; } = 5;
+    public int HealthErrorThreshold { get; set; } = 5;
     
     /// <summary>
     /// The time after which an unhealthy pool will attempt to attempt new connections  
     /// </summary>
-    public TimeSpan HealthCheckInterval { get; init; } = TimeSpan.FromSeconds(5);
+    public TimeSpan HealthCheckInterval { get; set; } = TimeSpan.FromSeconds(5);
     
     /// <summary>
     /// Socket connection timeout
     /// </summary>
-    public TimeSpan ConnectionTimeout { get; init; } = TimeSpan.FromSeconds(5);
+    public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(5);
     
     /// <summary>
     /// Socket receive packet timeout
     /// </summary>
-    public TimeSpan ReceiveTimeout { get; init; } = TimeSpan.FromSeconds(5);
+    public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(5);
     
     /// <summary>
     /// Socket send packet timeout
     /// </summary>
-    public TimeSpan SendTimeout { get; init; } = TimeSpan.FromSeconds(3);
+    public TimeSpan SendTimeout { get; set; } = TimeSpan.FromSeconds(3);
 }

@@ -1,16 +1,16 @@
+using GearQueue.Consumer;
 using GearQueue.Logging;
 using GearQueue.Options;
 using Microsoft.Extensions.Logging;
 
-namespace GearQueue.Consumer;
+namespace GearQueue.BatchConsumer;
 
-public class GearQueueConsumer(
+public class GearQueueBatchConsumer(
     GearQueueConsumerOptions options,
-    IGearQueueHandlerExecutor handlerExecutor,
+    IGearQueueBatchHandlerExecutor handlerExecutor,
     Type handlerType,
     ILoggerFactory loggerFactory) : IGearQueueConsumer
 {
-    
     /// <summary>
     /// Starts consuming gearman jobs. The returned task will not complete until cancellation is request 
     /// </summary>
@@ -19,22 +19,34 @@ public class GearQueueConsumer(
     {
         var logger = loggerFactory.CreateLogger<GearQueueConsumer>();
 
+        var batchCoordinator = new BatchCoordinator(loggerFactory, handlerExecutor, options, handlerType);
+        
         var instances = options.Servers
             .Select(serverOptions =>
             {
-                logger.LogStartingConsumer(serverOptions.ServerInfo.Hostname,
-                    serverOptions.ServerInfo.Port,
+                logger.LogStartingBatchConsumer(
                     serverOptions.Connections,
+                    serverOptions.ServerInfo.Hostname,
+                    serverOptions.ServerInfo.Port,
                     options.Function);
 
                 return Enumerable.Repeat(0, serverOptions.Connections)
                     .Select(_ =>
-                        new GearQueueConsumerInstance(serverOptions, options.Function, handlerType, handlerExecutor, loggerFactory));
-            })
-            .SelectMany(x => x);
+                    {
+                        var instance =
+                            new GearQueueBatchConsumerInstance(serverOptions, batchCoordinator, options.Function,
+                                loggerFactory);
+
+                        instance.RegisterResultCallback();
+
+                        return instance;
+                    });
+            }).SelectMany(instance => instance);
 
         var instanceTasks = instances.Select(i => i.Start(cancellationToken));
 
         await Task.WhenAll(instanceTasks).ConfigureAwait(false);
+        
+        await batchCoordinator.WaitAllHandlers();
     }
 }

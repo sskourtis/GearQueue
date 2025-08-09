@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using GearQueue.Logging;
 using GearQueue.Network;
+using GearQueue.Options;
 using GearQueue.Protocol;
 using GearQueue.Protocol.Request;
 using GearQueue.Protocol.Response;
@@ -23,7 +24,7 @@ internal class GearQueueConcurrentConsumerInstance(
     private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> _activeJobs = new();
     
     private readonly SemaphoreSlim _connectionSemaphore = new(1, 1);
-    private readonly SemaphoreSlim _handlerSemaphore = new(options.Concurrency, options.Concurrency);
+    private readonly SemaphoreSlim _handlerSemaphore = new(options.Connections, options.Connections);
     
     internal async Task Start(CancellationToken cancellationToken = default)
     {
@@ -111,14 +112,11 @@ internal class GearQueueConcurrentConsumerInstance(
         var stopwatch = Stopwatch.StartNew();
         
         await _connection.SendPacket(RequestFactory.GrabJob(), cancellationToken);
-        /*_logger.LogInformation("Sent grab job in {ElapsedMilliseconds}ms", stopwatch.ElapsedMilliseconds);*/
+
         stopwatch.Restart();
 
         var response = await _connection.GetPacket(cancellationToken);
-        /*_logger.LogInformation("Got response {Type} in {ElapsedMilliseconds}ms",
-            response?.Type.ToString() ?? "-",
-            stopwatch.ElapsedMilliseconds);*/
-        
+
         if (response is null)
         {
             return false;

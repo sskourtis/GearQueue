@@ -11,7 +11,7 @@ namespace GearQueue.Producer;
 public interface IGearQueueProducer
 {
     /// <summary>
-    /// 
+    /// Create a new gearman job for the given function with the given job data.
     /// </summary>
     /// <param name="functionName">Gearman function name</param>
     /// <param name="data">Job data</param>

@@ -9,6 +9,11 @@ public class GearQueueConsumer(
     IReadOnlyDictionary<string, Type> functions,
     ILoggerFactory loggerFactory)
 {
+    
+    /// <summary>
+    /// Starts consuming gearman jobs. The returned task will not complete until cancellation is request 
+    /// </summary>
+    /// <param name="cancellationToken"></param>
     public async Task StartConsuming(CancellationToken cancellationToken)
     {
         var logger = loggerFactory.CreateLogger<GearQueueConsumer>();
@@ -16,7 +21,7 @@ public class GearQueueConsumer(
         var instances = options.Servers
             .Select(serverOptions =>
             {
-                logger.LogStaringConsumer(serverOptions.ServerInfo.Hostname,
+                logger.LogStartingConsumer(serverOptions.ServerInfo.Hostname,
                     serverOptions.ServerInfo.Port,
                     serverOptions.Concurrency,
                     functions.Keys);
@@ -28,22 +33,6 @@ public class GearQueueConsumer(
             .SelectMany(x => x);
 
         var instanceTasks = instances.Select(i => i.Start(cancellationToken));
-
-        /*
-        var instances = options.Servers
-            .Select(serverOptions =>
-            {
-                logger.LogStaringConsumer(serverOptions.ServerInfo.Hostname,
-                    serverOptions.ServerInfo.Port,
-                    serverOptions.Concurrency,
-                    functions.Keys);
-
-                return new GearQueueConcurrentConsumerInstance(serverOptions, functions, handlerExecutor,
-                    loggerFactory);
-            });
-
-        var instanceTasks = instances.Select(i => i.Start(cancellationToken));
-        */
 
         await Task.WhenAll(instanceTasks).ConfigureAwait(false);
     }

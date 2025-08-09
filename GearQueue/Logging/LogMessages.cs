@@ -74,7 +74,7 @@ internal static partial class LogMessages
     [LoggerMessage(
         Message = "Starting consumer to {Host} and {Port} with {Concurrency} for {Functions}",
         Level = LogLevel.Information)]
-    internal static partial void LogStaringConsumer(
+    internal static partial void LogStartingConsumer(
         this ILogger logger,
         string host,
         int port,

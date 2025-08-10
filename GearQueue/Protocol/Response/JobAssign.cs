@@ -10,7 +10,7 @@ public class JobAssign
     
     public ReadOnlySpan<byte> Data => _packetData.AsSpan()[_dataOffset..];
 
-    private JobAssign(byte[] packetData, int dataOffset)
+    protected JobAssign(byte[] packetData, int dataOffset)
     {
         _packetData = packetData;
         _dataOffset = dataOffset;

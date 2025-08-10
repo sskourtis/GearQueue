@@ -113,9 +113,11 @@ internal class GearQueueBatchConsumerInstance(
         }
     }
     
+    private static readonly RequestPacket GrabJobPacket = RequestFactory.GrabJob();
+    
     private async Task<JobAssign?> CheckForJob(CancellationToken cancellationToken = default)
     {
-        await _connection.SendPacket(RequestFactory.GrabJob(), cancellationToken).ConfigureAwait(false);
+        await _connection.SendPacket(GrabJobPacket, cancellationToken).ConfigureAwait(false);
 			
         var response = await _connection.GetPacket(cancellationToken).ConfigureAwait(false);
 
@@ -124,11 +126,16 @@ internal class GearQueueBatchConsumerInstance(
             return null;
         }
 
-        if (response.Value.Type != PacketType.JobAssign)
+        switch (response.Value.Type)
         {
-            return null;
+            case PacketType.JobAssign:
+                return JobAssign.Create(response.Value.Data);
+            case PacketType.JobAssignUniq:
+                return JobAssignUniq.Create(response.Value.Data);
+            case PacketType.JobAssignAll:
+                return JobAssignAll.Create(response.Value.Data);
+            default:
+                return null;
         }
-
-        return JobAssign.Create(response.Value.Data);
     }
 }

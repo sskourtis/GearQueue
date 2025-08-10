@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using GearQueue.Consumer.Coordinators;
 using GearQueue.Logging;
 using GearQueue.Network;
 using GearQueue.Options;
@@ -12,8 +13,7 @@ namespace GearQueue.Consumer;
 internal class GearQueueConsumerInstance(
     GearQueueConsumerServerOptions options,
     string function,
-    Type handlerType,
-    IGearQueueHandlerExecutor handlerExecutor,
+    IHandlerExecutionCoordinator handlerExecutionCoordinator,
     ILoggerFactory loggerFactory
     ) : IDisposable
 {
@@ -28,6 +28,11 @@ internal class GearQueueConsumerInstance(
         await Task.Yield();
         
         await Connect(cancellationToken).ConfigureAwait(false);
+
+        handlerExecutionCoordinator.RegisterAsyncResultCallback(_connection.Id, async (jobHandle, status) =>
+        {
+            await SendResult(jobHandle, status).ConfigureAwait(false);
+        });
         
         while(!cancellationToken.IsCancellationRequested)
         {
@@ -104,43 +109,35 @@ internal class GearQueueConsumerInstance(
 
         var job = JobAssign.Create(response.Value.Data);
         
-        await CallHandler(job, cancellationToken).ConfigureAwait(false);
+        var result = await handlerExecutionCoordinator.ArrangeExecution(_connection.Id, job, cancellationToken).ConfigureAwait(false);
+
+        if (result is not null)
+        {
+            // Send the result right away when it completes synchronously
+            await SendResult(job.JobHandle, result.Value).ConfigureAwait(false);
+        }
 
         return true;
     }
 
-    private async Task CallHandler(JobAssign job, CancellationToken cancellationToken = default)
+    private async Task SendResult(string jobHandle, JobStatus jobStatus)
     {
         try
         {
-            var jobContext = new JobContext(job, cancellationToken);
-            
-            var (success, jobStatus) = await handlerExecutor.TryExecute(handlerType, jobContext).ConfigureAwait(false);
-
-            if (!success)
-            {
-                _logger.LogHandlerTypeCreationFailure(handlerType, job.FunctionName);
-                await _connection.SendPacket(RequestFactory.WorkFail(job.JobHandle),
-                    CancellationToken.None).ConfigureAwait(false);
-                return;
-            }
-
             if (jobStatus == JobStatus.Success)
             {
-                await _connection.SendPacket(RequestFactory.WorkComplete(job.JobHandle),
+                await _connection.SendPacket(RequestFactory.WorkComplete(jobHandle),
                     CancellationToken.None).ConfigureAwait(false);
             }
             else
             {
-                await _connection.SendPacket(RequestFactory.WorkFail(job.JobHandle),
+                await _connection.SendPacket(RequestFactory.WorkFail(jobHandle),
                     CancellationToken.None).ConfigureAwait(false);
             }
         }
-        catch (Exception e)
+        catch (SocketException e)
         {
-            _logger.LogConsumerException(e);
-            await _connection.SendPacket(RequestFactory.WorkFail(job.JobHandle),
-                CancellationToken.None).ConfigureAwait(false);
+            _logger.LogSocketError(options.ServerInfo.Hostname, options.ServerInfo.Port, e);
         }
     }
 

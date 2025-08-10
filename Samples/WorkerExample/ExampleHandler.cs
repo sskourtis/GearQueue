@@ -7,7 +7,7 @@ public class ExampleHandler(ILogger<ExampleHandler> logger) : IGearQueueHandler
 {
     private static readonly InvocationsTracker InvocationsTracker = new();
     
-    public Task<JobStatus> Consume(JobContext job)
+    public async Task<JobStatus> Consume(JobContext job)
     {
         var (total, perSecond) = InvocationsTracker.InvokeAndGetInvocations();
 
@@ -17,6 +17,6 @@ public class ExampleHandler(ILogger<ExampleHandler> logger) : IGearQueueHandler
                 total, perSecond.Value);
         }
             
-        return Task.FromResult(JobStatus.Success);
+        return JobStatus.Success;
     }
 }

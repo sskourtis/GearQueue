@@ -10,9 +10,9 @@ using Microsoft.Extensions.Logging;
 
 namespace GearQueue.BatchConsumer;
 
-public class GearQueueBatchConsumerInstance(
+internal class GearQueueBatchConsumerInstance(
     GearQueueConsumerServerOptions options,
-    IBatchCoordinator batchCoordinator,
+    IBatchHandlerExecutionCoordinator batchHandlerExecutionCoordinator,
     string function,
     ILoggerFactory loggerFactory)
 {
@@ -24,7 +24,7 @@ public class GearQueueBatchConsumerInstance(
 
     internal void RegisterResultCallback()
     {
-        batchCoordinator.RegisterJobResultCallback(_connection.Id, async (jobHandle, status) =>
+        batchHandlerExecutionCoordinator.RegisterAsyncResultCallback(_connection.Id, async (jobHandle, status) =>
         {
             if (status == JobStatus.Success)
             {
@@ -51,7 +51,7 @@ public class GearQueueBatchConsumerInstance(
             {
                 var job = await CheckForJob(cancellationToken).ConfigureAwait(false);
                 
-                var batchTimeout = await batchCoordinator.Notify(_connection.Id, job, cancellationToken)
+                var batchTimeout = await batchHandlerExecutionCoordinator.Notify(_connection.Id, job, cancellationToken)
                     .ConfigureAwait(false);
 
                 if (job is not null)

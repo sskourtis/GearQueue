@@ -19,7 +19,7 @@ public class GearQueueBatchConsumer(
     {
         var logger = loggerFactory.CreateLogger<GearQueueConsumer>();
 
-        var batchCoordinator = new BatchCoordinator(loggerFactory, handlerExecutor, options, handlerType);
+        var batchCoordinator = new BatchHandlerExecutionCoordinator(loggerFactory, handlerExecutor, options, handlerType);
         
         var instances = options.Servers
             .Select(serverOptions =>

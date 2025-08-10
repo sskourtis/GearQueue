@@ -7,20 +7,20 @@ using Microsoft.Extensions.Logging;
 
 namespace GearQueue.BatchConsumer;
 
-public interface IBatchCoordinator
+public interface IBatchHandlerExecutionCoordinator
 {
-    void RegisterJobResultCallback(int connectionId, Func<string, JobStatus, Task> callback);
+    void RegisterAsyncResultCallback(int connectionId, Func<string, JobStatus, Task> callback);
     Task<TimeSpan> Notify(int connectionId, JobAssign? job, CancellationToken cancellationToken);
     Task WaitAllHandlers();
 }
 
-public class BatchCoordinator(
+public class BatchHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
     IGearQueueBatchHandlerExecutor handlerExecutor,
     GearQueueConsumerOptions options,
-    Type handlerType) : IBatchCoordinator
+    Type handlerType) : IBatchHandlerExecutionCoordinator
 {
-    private readonly ILogger<BatchCoordinator> _logger = loggerFactory.CreateLogger<BatchCoordinator>();
+    private readonly ILogger<BatchHandlerExecutionCoordinator> _logger = loggerFactory.CreateLogger<BatchHandlerExecutionCoordinator>();
     private readonly List<(int ConnectionId, JobAssign Job)> _jobs = new(options.Batch!.Size);
     private readonly Dictionary<int, Func<string, JobStatus, Task>> _jobResultCallback = new();
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);
@@ -28,7 +28,7 @@ public class BatchCoordinator(
 
     private DateTimeOffset _lastHandlerCall = new(DateTime.Now);
 
-    public void RegisterJobResultCallback(int connectionId, Func<string, JobStatus, Task> callback)
+    public void RegisterAsyncResultCallback(int connectionId, Func<string, JobStatus, Task> callback)
     {
         _jobResultCallback[connectionId] = callback;
     }
@@ -105,6 +105,19 @@ public class BatchCoordinator(
                 if (_jobResultCallback.TryGetValue(job.ConnectionId, out var callback))
                 {
                     await callback.Invoke(job.Job.JobHandle, jobStatus.Value)
+                        .ConfigureAwait(false);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogConsumerException(e);
+            
+            foreach (var job in jobs)
+            {
+                if (_jobResultCallback.TryGetValue(job.ConnectionId, out var callback))
+                {
+                    await callback.Invoke(job.Job.JobHandle, JobStatus.PermanentFailure)
                         .ConfigureAwait(false);
                 }
             }

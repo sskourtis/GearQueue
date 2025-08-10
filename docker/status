@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+$|=1;
+
+sub repeat {
+	my $char = shift;
+	my $times = shift;
+	my $str = '';
+	for (my $i=0; $i <= $times; $i++) {
+       $str .= $char;
+    }
+	return $str;
+}
+
+while ( 1 ) {
+	system("clear");
+
+	my @statuses = `gearadmin --status`;
+	my @jobs = ();
+
+	# Max char length of first column
+	my $max_length = 10;
+	
+	foreach my $job ( @statuses ) {
+		$job =~ s/^\s+|\s+$//g;
+		if ($job eq '.') {
+			next;
+		}
+
+		my @job_data = split /\s+/, $job;
+
+		$max_length = length($job_data[0]) > $max_length ? length($job_data[0]) : $max_length;
+
+		push @jobs, {
+			name 		=> $job_data[0],
+			queue		=> $job_data[1] * 1,
+			running		=> $job_data[2] * 1,
+			workers		=> $job_data[3] * 1,
+			available	=> ($job_data[3] - $job_data[2]) * 1,
+			status		=> ($job_data[3] * 1 > 0 ? 'Up' : 'Down'),
+		};
+	}
+
+	print("GEARMAN STATUS\n\n");
+	printf("%-".$max_length."s | %-7s | %-7s | %-7s | %-7s | %-7s\n", "Name", "Workers", "Avail", "Running", "Queue", "Status");
+	printf(" %s\n", repeat('-', $max_length + 5*7 + 3 * 5 - 4) );	
+	foreach my $job ( @jobs ) {
+		printf("%-".$max_length."s | %-7s | %-7s | %-7s | %-7s | %-7s\n", 
+			$job->{name}, 
+			$job->{workers}, 
+			$job->{available}, 
+			$job->{running}, 
+			$job->{queue},
+			$job->{status});
+	}
+	printf(" %s\n", repeat('-', $max_length + 5*7 + 3 * 5 - 4) );	
+	
+	sleep 5;
+	
+}

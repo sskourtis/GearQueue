@@ -126,7 +126,18 @@ internal class ConnectionPool : IDisposable, IConnectionPool
 
         _reservedConnections.TryAdd(newConnectionInfo.Connection.Id, newConnectionInfo);
 
-        await newConnectionInfo.Connection.Connect(_serverInfo.Hostname, _serverInfo.Port, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await newConnectionInfo.Connection.Connect(_serverInfo.Hostname, _serverInfo.Port, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            _reservedConnections.TryRemove(newConnectionInfo.Connection.Id, out _);
+            newConnectionInfo.Connection.Dispose();
+            throw;
+        }
+        
         Metrics.IncrementConnectionsCreated();
 
         return newConnectionInfo.Connection;
@@ -151,6 +162,11 @@ internal class ConnectionPool : IDisposable, IConnectionPool
         if (hasError)
         {
             _healthTracker.ReportFailure();
+
+            if (!_healthTracker.IsHealthy)
+            {
+                DrainConnections();
+            }
         }
         else
         {
@@ -196,6 +212,14 @@ internal class ConnectionPool : IDisposable, IConnectionPool
         finally
         {
             _connectionsInUseSemaphore.Release();
+        }
+    }
+
+    private void DrainConnections()
+    {
+        while (_freeConnections.TryDequeue(out var connectionInfo))
+        {
+            try { connectionInfo.Connection.Dispose(); } catch { /* Ignore */ }
         }
     }
 

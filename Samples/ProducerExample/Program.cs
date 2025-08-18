@@ -8,9 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-builder.Services.AddGearQueueProducer(builder.Configuration);
-builder.Services.AddGearQueueProducer(builder.Configuration.GetSection("GearQueue:ProducerA"), "primary");
-builder.Services.AddGearQueueProducer(builder.Configuration.GetSection("GearQueue:ProducerB"), "secondary");
+builder.Services.AddGearQueue(g =>
+{
+    g.AddProducer(builder.Configuration.GetConnectionString("Producer")!);
+    g.AddNamedProducer("primary", builder.Configuration.GetConnectionString("ProducerA")!);
+    g.AddNamedProducer("secondary", builder.Configuration.GetConnectionString("ProducerB")!);
+});
 
 builder.Services.AddSingleton<JobCounter>();
 

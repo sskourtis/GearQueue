@@ -3,11 +3,14 @@ using WorkerExample;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddGearQueueConsumer<ExampleHandler>(
-    builder.Configuration.GetSection("GearQueue:TestFunction"));
+builder.Services.AddGearQueue(g =>
+{
+    g.AddConsumer(builder.Configuration.GetConnectionString("Consumer"))
+        .SetHandler<ExampleHandler>("test-function");
 
-builder.Services.AddGearQueueConsumer<ExampleBatchHandler>(
-    builder.Configuration.GetSection("GearQueue:TestBatchFunction"));
+    g.AddConsumer(builder.Configuration.GetConnectionString("BatchConsumer"))
+        .SetHandler<ExampleBatchHandler>("test-batch-function");
+});
 
 var host = builder.Build();
 host.Run();

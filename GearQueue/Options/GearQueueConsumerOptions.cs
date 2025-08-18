@@ -5,7 +5,7 @@ public sealed class GearQueueConsumerOptions
     /// <summary>
     /// Options for each gearman job server.
     /// </summary>
-    public List<GearQueueConsumerServerOptions> Servers { get; init; } = new();
+    public List<GearQueueConsumerHostsOptions> Hosts { get; set; } = new();
 
     /// <summary>
     /// The maximum number of jobs to be handled at a time.
@@ -26,11 +26,6 @@ public sealed class GearQueueConsumerOptions
     /// </para>
     /// </summary>
     public ConcurrencyStrategy ConcurrencyStrategy { get; set; } = ConcurrencyStrategy.AcrossServers;
-
-    /// <summary>
-    /// Gearman function from where to consume jobs
-    /// </summary>
-    public string Function { get; set; } = string.Empty;
     
     /// <summary>
     /// Enable consuming jobs in batches

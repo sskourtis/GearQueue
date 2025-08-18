@@ -11,17 +11,13 @@ using Microsoft.Extensions.Logging;
 namespace GearQueue.Consumer;
 
 internal class GearQueueConsumerInstance(
-    GearQueueConsumerServerOptions options,
-    string function,
+    GearQueueConsumerHostsOptions options,
+    IEnumerable<string> functions,
     IHandlerExecutionCoordinator handlerExecutionCoordinator,
-    ILoggerFactory loggerFactory
-    ) : IDisposable
+    ILoggerFactory loggerFactory) : IDisposable
 {
     private readonly ILogger<GearQueueConsumerInstance> _logger = loggerFactory.CreateLogger<GearQueueConsumerInstance>();
-    private readonly Connection _connection = new(loggerFactory, 
-        options.ConnectionTimeout,  
-        options.SendTimeout, 
-        options.ReceiveTimeout);
+    private readonly Connection _connection = new(loggerFactory, options.Host);
     
     internal async Task Start(CancellationToken cancellationToken = default)
     {
@@ -76,16 +72,19 @@ internal class GearQueueConsumerInstance(
         {
             try
             {
-                await _connection.Connect(options.ServerInfo.Hostname, options.ServerInfo.Port, cancellationToken).ConfigureAwait(false);
-                
-                await _connection.SendPacket(RequestFactory.CanDo(function), cancellationToken).ConfigureAwait(false);
+                await _connection.Connect(cancellationToken).ConfigureAwait(false);
+
+                foreach (var function in functions)
+                {
+                    await _connection.SendPacket(RequestFactory.CanDo(function), cancellationToken).ConfigureAwait(false);    
+                }
 
                 break;
             }
             catch (SocketException e)
             {
-                _logger.LogSocketError(options.ServerInfo.Hostname,
-                    options.ServerInfo.Port, 
+                _logger.LogSocketError(options.Host.Hostname,
+                    options.Host.Port, 
                     options.ReconnectTimeout,
                     e);
                 await Task.Delay(options.ReconnectTimeout, cancellationToken).ConfigureAwait(false);
@@ -151,7 +150,7 @@ internal class GearQueueConsumerInstance(
         }
         catch (SocketException e)
         {
-            _logger.LogSocketError(options.ServerInfo.Hostname, options.ServerInfo.Port, e);
+            _logger.LogSocketError(options.Host.Hostname, options.Host.Port, e);
         }
     }
 

@@ -21,7 +21,6 @@ internal interface IConnectionPool
 internal class ConnectionPool : IDisposable, IConnectionPool
 {
     private readonly ILogger<ConnectionPool> _logger;
-    private readonly ServerInfo _serverInfo;
     private readonly ConnectionPoolOptions _options;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ConcurrentDictionary<int, ConnectionInfo> _reservedConnections = new();
@@ -57,11 +56,10 @@ internal class ConnectionPool : IDisposable, IConnectionPool
         _connectionFactory = connectionFactory;
         _timeProvider = timeProvider;
         _healthTracker = new ServerHealthTracker(
-            options.ServerInfo,
+            options.Host,
             options.HealthErrorThreshold, 
             options.HealthCheckInterval,
             loggerFactory);
-        _serverInfo = options.ServerInfo;
         _connectionsInUseSemaphore = new SemaphoreSlim(options.MaxConnections, options.MaxConnections);
     }
     
@@ -120,7 +118,7 @@ internal class ConnectionPool : IDisposable, IConnectionPool
     {
         var newConnectionInfo = new ConnectionInfo
         {
-            Connection = _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout),
+            Connection = _connectionFactory.CreateConnection(_loggerFactory, _options.Host),
             CreatedAt = _timeProvider.Now
         };
 
@@ -128,7 +126,7 @@ internal class ConnectionPool : IDisposable, IConnectionPool
 
         try
         {
-            await newConnectionInfo.Connection.Connect(_serverInfo.Hostname, _serverInfo.Port, cancellationToken)
+            await newConnectionInfo.Connection.Connect(cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception)

@@ -8,7 +8,7 @@ namespace GearQueue.BatchConsumer;
 public class GearQueueBatchConsumer(
     GearQueueConsumerOptions options,
     IGearQueueBatchHandlerExecutor handlerExecutor,
-    Type handlerType,
+    Dictionary<string, Type> handlers,
     ILoggerFactory loggerFactory) : IGearQueueConsumer
 {
     /// <summary>
@@ -19,22 +19,22 @@ public class GearQueueBatchConsumer(
     {
         var logger = loggerFactory.CreateLogger<GearQueueConsumer>();
 
-        var batchCoordinator = new BatchHandlerExecutionCoordinator(loggerFactory, handlerExecutor, options, handlerType);
+        var batchCoordinator = new BatchHandlerExecutionCoordinator(loggerFactory, handlerExecutor, options, handlers.First().Value);
         
-        var instances = options.Servers
+        var instances = options.Hosts
             .Select(serverOptions =>
             {
                 logger.LogStartingBatchConsumer(
                     serverOptions.Connections,
-                    serverOptions.ServerInfo.Hostname,
-                    serverOptions.ServerInfo.Port,
-                    options.Function);
+                    serverOptions.Host.Hostname,
+                    serverOptions.Host.Port,
+                    string.Join(',', handlers.Keys));
 
                 return Enumerable.Repeat(0, serverOptions.Connections)
                     .Select(_ =>
                     {
                         var instance =
-                            new GearQueueBatchConsumerInstance(serverOptions, batchCoordinator, options.Function,
+                            new GearQueueBatchConsumerInstance(serverOptions, batchCoordinator, handlers.First().Key,
                                 loggerFactory);
 
                         instance.RegisterResultCallback();

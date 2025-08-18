@@ -1,6 +1,6 @@
 using GearQueue.Consumer;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection;
+namespace GearQueue.Extensions.Microsoft.DependencyInjection.HandlerExecutors;
 
 public class GearQueueMicrosoftHandlerExecutor(
     IServiceProvider serviceProvider) : IGearQueueHandlerExecutor

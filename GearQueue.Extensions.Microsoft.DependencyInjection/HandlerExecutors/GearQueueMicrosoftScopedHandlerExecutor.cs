@@ -1,7 +1,7 @@
 using GearQueue.Consumer;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection;
+namespace GearQueue.Extensions.Microsoft.DependencyInjection.HandlerExecutors;
 
 public class GearQueueMicrosoftScopedHandlerExecutor(
     IServiceScopeFactory serviceScopeFactory) : IGearQueueHandlerExecutor

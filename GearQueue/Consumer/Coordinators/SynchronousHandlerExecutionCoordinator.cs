@@ -6,7 +6,7 @@ namespace GearQueue.Consumer.Coordinators;
 
 public class SynchronousHandlerExecutionCoordinator(
     IGearQueueHandlerExecutor handlerExecutor,
-    Type handlerType,
+    Dictionary<string, Type> handlers,
     ILoggerFactory loggerFactory) : IHandlerExecutionCoordinator
 {
     private readonly ILogger<SynchronousHandlerExecutionCoordinator> _logger = loggerFactory.CreateLogger<SynchronousHandlerExecutionCoordinator>();
@@ -20,6 +20,13 @@ public class SynchronousHandlerExecutionCoordinator(
         try
         {
             var jobContext = new JobContext(job, cancellationToken);
+            
+            if (!handlers.TryGetValue(job.FunctionName, out var handlerType))
+            {
+                _logger.LogMissingHandlerType(job.FunctionName);
+               
+                return JobStatus.PermanentFailure;
+            }
             
             var (success, jobStatus) = await handlerExecutor.TryExecute(handlerType, jobContext).ConfigureAwait(false);
 

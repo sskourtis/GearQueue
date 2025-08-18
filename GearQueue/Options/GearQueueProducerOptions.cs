@@ -1,6 +1,3 @@
-using GearQueue.Network;
-using GearQueue.Producer;
-
 namespace GearQueue.Options;
 
 public class GearQueueProducerOptions
@@ -8,7 +5,7 @@ public class GearQueueProducerOptions
     /// <summary>
     /// Connection pool options. For each gearman job server, the library will manage a separate connection pool
     /// </summary>
-    public IList<ConnectionPoolOptions> Servers { get; init; } =  new List<ConnectionPoolOptions>();
+    public IList<ConnectionPoolOptions> ConnectionPools { get; set; } =  new List<ConnectionPoolOptions>();
     
     /// <summary>
     /// Connection selection strategy between the available connection pools.

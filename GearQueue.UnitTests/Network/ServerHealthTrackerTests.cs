@@ -1,4 +1,5 @@
 using GearQueue.Network;
+using GearQueue.Options;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 
@@ -6,12 +7,12 @@ namespace GearQueue.UnitTests.Network;
 
 public class ServerHealthTrackerTests
 {
-    private readonly ServerInfo _serverInfo;
+    private readonly GearQueueHostOptions _gearQueueHostOptions;
     private readonly ILoggerFactory _loggerFactory;
 
     public ServerHealthTrackerTests()
     {
-        _serverInfo = new ServerInfo
+        _gearQueueHostOptions = new GearQueueHostOptions
         {
             Hostname = "test-server",
             Port = 8080
@@ -197,7 +198,7 @@ public class ServerHealthTrackerTests
         TimeSpan? healthCheckInterval = null)
     {
         return new ServerHealthTracker(
-            _serverInfo,
+            _gearQueueHostOptions,
             failureThreshold,
             healthCheckInterval ?? TimeSpan.FromMinutes(1),
             _loggerFactory);

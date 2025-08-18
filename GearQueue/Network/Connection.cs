@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 using GearQueue.Logging;
+using GearQueue.Options;
 using GearQueue.Protocol;
 using GearQueue.Protocol.Request;
 using GearQueue.Protocol.Response;
@@ -12,7 +13,7 @@ namespace GearQueue.Network;
 internal interface IConnection
 {
     int Id { get; }
-    Task Connect(string hostname, int port, CancellationToken cancellationToken = default);
+    Task Connect(CancellationToken cancellationToken = default);
 
     Task SendPacket(RequestPacket packet, CancellationToken cancellationToken = default);
 
@@ -32,62 +33,46 @@ internal class Connection : IDisposable, IConnection
     private Socket? _socket;
     private bool _disposed;
     
-    private readonly TimeSpan _connectionTimeout;
-    private readonly TimeSpan _sendTimeout;
-    private readonly TimeSpan _receiveTimeout;
-
-    public Connection(ILoggerFactory loggerFactory) 
-        : this(loggerFactory, 
-            TimeSpan.FromSeconds(5),
-            TimeSpan.FromSeconds(5),
-            TimeSpan.FromSeconds(5))
-    {
-    }
+    private readonly GearQueueHostOptions _options;
     
-    public Connection(ILoggerFactory loggerFactory, 
-        TimeSpan connectionTimeout,
-        TimeSpan sendTimeout, 
-        TimeSpan receiveTimeout)
+    public Connection(ILoggerFactory loggerFactory, GearQueueHostOptions options)
     {
         _logger = loggerFactory.CreateLogger<Connection>();
         Id = Interlocked.Increment(ref _nextId);
-        _connectionTimeout = connectionTimeout;
-        _sendTimeout = sendTimeout;
-        _receiveTimeout = receiveTimeout;
+        _options = options;
     }
 
-    public async Task Connect(string hostname, int port, CancellationToken cancellationToken = default)
+    public async Task Connect(CancellationToken cancellationToken = default)
     {
-        using var timeoutCts = new CancellationTokenSource(_sendTimeout);
+        using var timeoutCts = new CancellationTokenSource(_options.ConnectionTimeout);
         
         if (cancellationToken == CancellationToken.None)
         {
-            await ConnectWithTimeout(hostname, port, timeoutCts.Token).ConfigureAwait(false);
+            await ConnectWithTimeout(timeoutCts.Token).ConfigureAwait(false);
             return;
         }
         
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-        await ConnectWithTimeout(hostname, port, linkedCts.Token).ConfigureAwait(false);
+        await ConnectWithTimeout(linkedCts.Token).ConfigureAwait(false);
     }
     
-    private async Task ConnectWithTimeout(string hostname, int port, CancellationToken cancellationToken)
+    private async Task ConnectWithTimeout(CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(hostname))
-            throw new ArgumentNullException(nameof(hostname));
+        if (string.IsNullOrWhiteSpace(_options.Hostname))
+            throw new ArgumentNullException(nameof(_options.Hostname));
 
-        if (port is <= 0 or > 65535)
+        if (_options.Port is <= 0 or > 65535)
             throw new ArgumentException("port must be between 1 and 65535");
-        
         
         IPAddress address;
 			
         try 
         {
-            address = IPAddress.Parse(hostname);
+            address = IPAddress.Parse(_options.Hostname);
         } 
         catch (Exception)
         {
-            var addresses = await Dns.GetHostAddressesAsync(hostname, cancellationToken).ConfigureAwait(false);
+            var addresses = await Dns.GetHostAddressesAsync(_options.Hostname, cancellationToken).ConfigureAwait(false);
             
             // Connect to the first DNS entry
             address = addresses[Random.Shared.Next(addresses.Length)];	
@@ -95,7 +80,7 @@ internal class Connection : IDisposable, IConnection
 
         cancellationToken.ThrowIfCancellationRequested();
 			
-        var endPoint = new IPEndPoint(address, port);
+        var endPoint = new IPEndPoint(address, _options.Port);
 			 
         // dispose old object on reconnect
         _socket?.Dispose();
@@ -109,12 +94,12 @@ internal class Connection : IDisposable, IConnection
 			
         await _socket.ConnectAsync(endPoint, cancellationToken).ConfigureAwait(false);
         
-        _logger.LogConnectionEstablished(hostname, port, Id);
+        _logger.LogConnectionEstablished(_options.Hostname, _options.Port, Id);
     }
 
     public async Task SendPacket(RequestPacket packet, CancellationToken cancellationToken = default)
     {
-        using var timeoutCts = new CancellationTokenSource(_receiveTimeout);
+        using var timeoutCts = new CancellationTokenSource(_options.SendTimeout);
         
         if (cancellationToken == CancellationToken.None)
         {
@@ -169,7 +154,7 @@ internal class Connection : IDisposable, IConnection
 
     public async Task<ResponsePacket?> GetPacket(CancellationToken cancellationToken = default, bool skipBody = false)
     {
-        using var timeoutCts = new CancellationTokenSource(_connectionTimeout);
+        using var timeoutCts = new CancellationTokenSource(_options.ReceiveTimeout);
         
         if (cancellationToken == CancellationToken.None)
         {

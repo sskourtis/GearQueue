@@ -2,7 +2,7 @@ using GearQueue.BatchConsumer;
 using GearQueue.Consumer;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection;
+namespace GearQueue.Extensions.Microsoft.DependencyInjection.HandlerExecutors;
 
 public class GearQueueMicrosoftBatchScopedHandlerExecutor(
     IServiceScopeFactory serviceScopeFactory) : IGearQueueBatchHandlerExecutor

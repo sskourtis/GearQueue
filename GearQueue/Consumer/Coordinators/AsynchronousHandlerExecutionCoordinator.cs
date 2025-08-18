@@ -8,7 +8,7 @@ namespace GearQueue.Consumer.Coordinators;
 
 public class AsynchronousHandlerExecutionCoordinator(
     IGearQueueHandlerExecutor handlerExecutor,
-    Type handlerType,
+    Dictionary<string, Type> handlers,
     GearQueueConsumerOptions options,
     ILoggerFactory loggerFactory) : IHandlerExecutionCoordinator
 {
@@ -49,6 +49,17 @@ public class AsynchronousHandlerExecutionCoordinator(
         try
         {
             var jobContext = new JobContext(job, cancellationToken);
+
+            if (!handlers.TryGetValue(job.FunctionName, out var handlerType))
+            {
+                _logger.LogMissingHandlerType(job.FunctionName);
+                if (_jobResultCallback.TryGetValue(connectionId, out var errorCallBack))
+                {
+                    await errorCallBack.Invoke(job.JobHandle, JobStatus.PermanentFailure)
+                        .ConfigureAwait(false);
+                }
+                return;
+            }
 
             var (success, jobStatus) = await handlerExecutor.TryExecute(handlerType, jobContext).ConfigureAwait(false);
 

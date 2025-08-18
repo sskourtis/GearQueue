@@ -1,11 +1,11 @@
-using GearQueue.Producer;
-
 namespace GearQueue.Options.Validation;
 
-public class GearQueueProducerOptionsValidator
+public class GearQueueProducerOptionsValidator : IGearQueueValidator<GearQueueProducerOptions>
 {
     public ValidationResult Validate(GearQueueProducerOptions options)
     {
+        var serverValidator = new GearQueueHostOptionsValidator();
+        
         var errors = new List<string>();
         
         if (!Enum.GetValues<DistributionStrategy>().Contains(options.DistributionStrategy))
@@ -13,23 +13,20 @@ public class GearQueueProducerOptionsValidator
             errors.Add($"Distribution strategy {options.DistributionStrategy} not supported");
         }
         
-        if (options.Servers.Count == 0)
+        if (options.ConnectionPools.Count == 0)
         {
             errors.Add("No gearman servers configured");
             
             return new ValidationResult(errors);
         }
 
-        foreach (var connectionPoolSettings in options.Servers)
+        foreach (var connectionPoolSettings in options.ConnectionPools)
         {
-            if (Uri.CheckHostName(connectionPoolSettings.ServerInfo.Hostname) == UriHostNameType.Unknown)
-            {
-                errors.Add($"Server {connectionPoolSettings.ServerInfo.Hostname} does not appear to be a valid hostname"); 
-            }
+            var serverValidationResult = serverValidator.Validate(connectionPoolSettings.Host);
 
-            if (connectionPoolSettings.ServerInfo.Port is <= 0 or > 65535)
+            if (!serverValidationResult.IsValid)
             {
-                errors.Add($"Server {connectionPoolSettings.ServerInfo.Port} is not a valid port number");
+                errors.AddRange(serverValidationResult.Errors);    
             }
             
             if (connectionPoolSettings.ConnectionMaxAge <= TimeSpan.Zero)
@@ -50,21 +47,6 @@ public class GearQueueProducerOptionsValidator
             if (connectionPoolSettings.HealthCheckInterval <= TimeSpan.Zero)
             {
                 errors.Add("health check interval must be greater than zero");
-            }
-
-            if (connectionPoolSettings.ConnectionTimeout <= TimeSpan.Zero)
-            {
-                errors.Add("connection timeout must be greater than zero");
-            }
-                
-            if (connectionPoolSettings.ReceiveTimeout <= TimeSpan.Zero)
-            {
-                errors.Add("receive timeout must be greater than zero");
-            }
-                
-            if (connectionPoolSettings.SendTimeout <= TimeSpan.Zero)
-            {
-                errors.Add("send timeout must be greater than zero");
             }
         }
 

@@ -43,7 +43,7 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
     {
         _logger = loggerFactory.CreateLogger<GearQueueProducer>();
         _options = options;
-        _connectionPools = options.Servers
+        _connectionPools = options.ConnectionPools
             .Select(x => new ConnectionPool(x, loggerFactory, new ConnectionFactory(), new TimeProvider()))
             .ToArray<IConnectionPool>();
     }
@@ -52,7 +52,7 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
     {
         _logger = loggerFactory.CreateLogger<GearQueueProducer>();
         _options = options;
-        _connectionPools = options.Servers
+        _connectionPools = options.ConnectionPools
             .Select(connectionPoolFactory.Create)
             .ToArray();
     }
@@ -101,7 +101,7 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
                 {
                     Interlocked.Exchange(ref _distributionStrategyCounter, adjustedIndex);
                     
-                    var serverInfo = _options.Servers[adjustedIndex].ServerInfo;
+                    var serverInfo = _options.ConnectionPools[adjustedIndex].Host;
                     
                     _logger.LogNewPrimaryServer(serverInfo.Hostname, serverInfo.Port);
                 }
@@ -158,7 +158,7 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
         }
         catch (SocketException e)
         {
-            var serverInfo = _options.Servers[serverIndex].ServerInfo;
+            var serverInfo = _options.ConnectionPools[serverIndex].Host;
             _logger.LogSocketError(serverInfo.Hostname, serverInfo.Port, e);
 
             if (connection is not null)

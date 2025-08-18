@@ -3,10 +3,10 @@ using Microsoft.Extensions.Hosting;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection;
 
-public class GearQueueHostedService<T>(IGearQueueConsumer consumer) : BackgroundService where T : IGearQueueBaseHandler
+public class GearQueueHostedService(IEnumerable<IGearQueueConsumer> consumers) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await consumer.StartConsuming(stoppingToken);
+        await Task.WhenAll(consumers.Select(c => c.StartConsuming(stoppingToken)));
     }
 }

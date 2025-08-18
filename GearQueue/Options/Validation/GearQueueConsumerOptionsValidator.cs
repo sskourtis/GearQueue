@@ -1,21 +1,18 @@
 namespace GearQueue.Options.Validation;
 
-public class GearQueueConsumerOptionsValidator
+public class GearQueueConsumerOptionsValidator : IGearQueueValidator<GearQueueConsumerOptions>
 {
     public ValidationResult Validate(GearQueueConsumerOptions options)
     {
+        var serverValidator = new GearQueueHostOptionsValidator();
+        
         var errors = new List<string>();
         
-        if (options.Servers.Count == 0)
+        if (options.Hosts.Count == 0)
         {
             errors.Add("No gearman servers configured");
             
             return new ValidationResult(errors);
-        }
-        
-        if (string.IsNullOrWhiteSpace(options.Function))
-        {
-            errors.Add("Function property is required");
         }
 
         if (options.Batch is not null)
@@ -36,41 +33,23 @@ public class GearQueueConsumerOptionsValidator
             }
         }
 
-        foreach (var connectionPoolSettings in options.Servers)
+        foreach (var servers in options.Hosts)
         {
-            if (Uri.CheckHostName(connectionPoolSettings.ServerInfo.Hostname) == UriHostNameType.Unknown)
-            {
-                errors.Add($"Server {connectionPoolSettings.ServerInfo.Hostname} does not appear to be a valid hostname"); 
-            }
+            var serverValidationResult = serverValidator.Validate(servers.Host);
 
-            if (connectionPoolSettings.ServerInfo.Port is <= 0 or > 65535)
+            if (!serverValidationResult.IsValid)
             {
-                errors.Add($"Server {connectionPoolSettings.ServerInfo.Port} is not a valid port number");
+                errors.AddRange(serverValidationResult.Errors);    
             }
             
-            if (!connectionPoolSettings.UsePreSleep && connectionPoolSettings.PollingDelay <= TimeSpan.Zero)
+            if (!servers.UsePreSleep && servers.PollingDelay <= TimeSpan.Zero)
             {
-                errors.Add($"Server {connectionPoolSettings.PollingDelay} should be greater than zero when presleep is disabled");
+                errors.Add($"Server {servers.PollingDelay} should be greater than zero when presleep is disabled");
             }
 
-            if (connectionPoolSettings.ReconnectTimeout <=  TimeSpan.Zero)
+            if (servers.ReconnectTimeout <=  TimeSpan.Zero)
             {
                 errors.Add("Reconnect timeout must be greater than zero");
-            }
-
-            if (connectionPoolSettings.ConnectionTimeout <= TimeSpan.Zero)
-            {
-                errors.Add("connection timeout must be greater than zero");
-            }
-                
-            if (connectionPoolSettings.ReceiveTimeout <= TimeSpan.Zero)
-            {
-                errors.Add("receive timeout must be greater than zero");
-            }
-                
-            if (connectionPoolSettings.SendTimeout <= TimeSpan.Zero)
-            {
-                errors.Add("send timeout must be greater than zero");
             }
         }
 

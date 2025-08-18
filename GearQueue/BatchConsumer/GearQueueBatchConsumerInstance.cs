@@ -11,16 +11,13 @@ using Microsoft.Extensions.Logging;
 namespace GearQueue.BatchConsumer;
 
 internal class GearQueueBatchConsumerInstance(
-    GearQueueConsumerServerOptions options,
+    GearQueueConsumerHostsOptions options,
     IBatchHandlerExecutionCoordinator batchHandlerExecutionCoordinator,
     string function,
     ILoggerFactory loggerFactory)
 {
     private readonly ILogger<GearQueueBatchConsumerInstance> _logger = loggerFactory.CreateLogger<GearQueueBatchConsumerInstance>();
-    private readonly Connection _connection = new(loggerFactory, 
-        options.ConnectionTimeout,  
-        options.SendTimeout, 
-        options.ReceiveTimeout);
+    private readonly Connection _connection = new(loggerFactory, options.Host);
 
     internal void RegisterResultCallback()
     {
@@ -96,7 +93,7 @@ internal class GearQueueBatchConsumerInstance(
         {
             try
             {
-                await _connection.Connect(options.ServerInfo.Hostname, options.ServerInfo.Port, cancellationToken).ConfigureAwait(false);
+                await _connection.Connect(cancellationToken).ConfigureAwait(false);
                 
                 await _connection.SendPacket(RequestFactory.CanDo(function), cancellationToken).ConfigureAwait(false);
 
@@ -104,8 +101,8 @@ internal class GearQueueBatchConsumerInstance(
             }
             catch (SocketException e)
             {
-                _logger.LogSocketError(options.ServerInfo.Hostname,
-                    options.ServerInfo.Port, 
+                _logger.LogSocketError(options.Host.Hostname,
+                    options.Host.Port, 
                     options.ReconnectTimeout,
                     e);
                 await Task.Delay(options.ReconnectTimeout, cancellationToken).ConfigureAwait(false);

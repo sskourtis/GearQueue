@@ -8,7 +8,7 @@ namespace GearQueue.Consumer;
 public class GearQueueConsumer(
     GearQueueConsumerOptions options,
     IGearQueueHandlerExecutor handlerExecutor,
-    Type handlerType,
+    Dictionary<string, Type> handlers,
     ILoggerFactory loggerFactory) : IGearQueueConsumer
 {
     /// <summary>
@@ -25,16 +25,16 @@ public class GearQueueConsumer(
         if (options.ConcurrencyStrategy == ConcurrencyStrategy.AcrossServers)
         {
             coordinators.Add(
-                new AsynchronousHandlerExecutionCoordinator(handlerExecutor, handlerType, options, loggerFactory));
+                new AsynchronousHandlerExecutionCoordinator(handlerExecutor, handlers, options, loggerFactory));
         }
 
-        var instances = options.Servers
+        var instances = options.Hosts
             .Select(serverOptions =>
             {
-                logger.LogStartingConsumer(serverOptions.ServerInfo.Hostname,
-                    serverOptions.ServerInfo.Port,
-                    serverOptions.Connections,
-                    options.Function);
+                logger.LogStartingConsumer(serverOptions.Host.Hostname,
+                    serverOptions.Host.Port,
+                    serverOptions.Connections, 
+                    string.Join(',', handlers.Keys));
                 
                 IHandlerExecutionCoordinator? sharedCoordinator = null;
 
@@ -46,7 +46,7 @@ public class GearQueueConsumer(
                         break;
                     case ConcurrencyStrategy.PerServer:
                         // PerServer, all the connections to this server share the same coordinator
-                        sharedCoordinator = new AsynchronousHandlerExecutionCoordinator(handlerExecutor, handlerType, options, loggerFactory);
+                        sharedCoordinator = new AsynchronousHandlerExecutionCoordinator(handlerExecutor, handlers, options, loggerFactory);
                         coordinators.Add(sharedCoordinator);
                         break;
                     case ConcurrencyStrategy.PerConnection:
@@ -64,15 +64,15 @@ public class GearQueueConsumer(
                         switch (coordinator)
                         {
                             case null when options.MaxConcurrency == 1:
-                                coordinator = new SynchronousHandlerExecutionCoordinator(handlerExecutor, handlerType, loggerFactory);
+                                coordinator = new SynchronousHandlerExecutionCoordinator(handlerExecutor, handlers, loggerFactory);
                                 break;
                             case null:
-                                coordinator = new AsynchronousHandlerExecutionCoordinator(handlerExecutor, handlerType, options, loggerFactory);
+                                coordinator = new AsynchronousHandlerExecutionCoordinator(handlerExecutor, handlers, options, loggerFactory);
                                 coordinators.Add(coordinator);
                                 break;
                         }
                         
-                        return new GearQueueConsumerInstance(serverOptions, options.Function, coordinator, loggerFactory);
+                        return new GearQueueConsumerInstance(serverOptions, handlers.Keys, coordinator, loggerFactory);
                     });
             })
             .SelectMany(x => x);

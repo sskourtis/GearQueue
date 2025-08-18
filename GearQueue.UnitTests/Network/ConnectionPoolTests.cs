@@ -12,7 +12,6 @@ public class ConnectionPoolTests
     private readonly ILoggerFactory _loggerFactory;
     private readonly IConnectionFactory _connectionFactory;
     private readonly ITimeProvider _timeProvider;
-    private readonly ServerInfo _serverInfo;
     private readonly ConnectionPoolOptions _options;
     private readonly DateTimeOffset _baseTime = new(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
@@ -25,7 +24,7 @@ public class ConnectionPoolTests
         _timeProvider = Substitute.For<ITimeProvider>();
         _timeProvider.Now.Returns(_baseTime);
         
-        _serverInfo = new ServerInfo
+        var gearmanServerOptions = new GearQueueHostOptions
         {
             Hostname = "test-host",
             Port = 8080
@@ -33,7 +32,7 @@ public class ConnectionPoolTests
         
         _options = new ConnectionPoolOptions
         {
-            ServerInfo = _serverInfo,
+            Host = gearmanServerOptions,
             MaxConnections = 5,
             ConnectionMaxAge = TimeSpan.FromMinutes(10),
             NewConnectionTimeout = TimeSpan.FromSeconds(5),
@@ -57,7 +56,7 @@ public class ConnectionPoolTests
     {
         // Arrange
         var connection = CreateMockConnection(1);
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(connection);
+        _connectionFactory.CreateConnection(_loggerFactory,  _options.Host).Returns(connection);
         var pool = CreatePool();
         
         // Act
@@ -65,7 +64,7 @@ public class ConnectionPoolTests
         
         // Assert
         Assert.Same(connection, result);
-        await connection.Received(1).Connect(_serverInfo.Hostname, _serverInfo.Port, Arg.Any<CancellationToken>());
+        await connection.Received(1).Connect(Arg.Any<CancellationToken>());
     }
     
     [Fact]
@@ -73,7 +72,7 @@ public class ConnectionPoolTests
     {
         // Arrange
         var connection = CreateMockConnection(1);
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(connection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(connection);
         var pool = CreatePool();
         
         // Get a connection and return it to the pool
@@ -85,7 +84,7 @@ public class ConnectionPoolTests
         
         // Assert
         Assert.Same(connection, result);
-        await connection.Received(1).Connect(_serverInfo.Hostname, _serverInfo.Port, Arg.Any<CancellationToken>());
+        await connection.Received(1).Connect(Arg.Any<CancellationToken>());
     }
     
     [Fact]
@@ -93,7 +92,7 @@ public class ConnectionPoolTests
     {
         // Arrange
         var connection = CreateMockConnection(1);
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(connection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(connection);
         var pool = CreatePool();
         
         // Get a connection and return it to the pool
@@ -105,7 +104,7 @@ public class ConnectionPoolTests
         
         // Setup for a new connection
         var newConnection = CreateMockConnection(2);
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(newConnection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(newConnection);
         
         // Act
         var result = await pool.Get(TestContext.Current.CancellationToken);
@@ -122,7 +121,7 @@ public class ConnectionPoolTests
         var pool = CreatePool();
 
         var id = 0;
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(_ => CreateMockConnection(id++));
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(_ => CreateMockConnection(id++));
         
         // Fill the pool to capacity
         for (var i = 0; i < _options.MaxConnections; i++)
@@ -144,7 +143,7 @@ public class ConnectionPoolTests
     {
         // Arrange
         var connection = CreateMockConnection(1);
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(connection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(connection);
         var pool = CreatePool();
         
         var obtainedConnection = await pool.Get(TestContext.Current.CancellationToken);
@@ -157,7 +156,7 @@ public class ConnectionPoolTests
         
         // Verify the connection isn't reused
         var newConnection = CreateMockConnection(2);
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(newConnection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(newConnection);
         var nextConnection = await pool.Get(TestContext.Current.CancellationToken);
         Assert.Same(newConnection, nextConnection);
     }
@@ -167,7 +166,7 @@ public class ConnectionPoolTests
     {
         // Arrange
         var connection = CreateMockConnection(1);
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(connection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(connection);
         var pool = CreatePool();
         
         var obtainedConnection = await pool.Get(TestContext.Current.CancellationToken);
@@ -187,7 +186,7 @@ public class ConnectionPoolTests
     {
         // Arrange
         var connection = CreateMockConnection(1);
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(connection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(connection);
         var pool = CreatePool();
         
         var obtainedConnection = await pool.Get(TestContext.Current.CancellationToken);
@@ -224,7 +223,7 @@ public class ConnectionPoolTests
         // Arrange
         var connection = CreateMockConnection(1);
         connection.When(x => x.Dispose()).Do(_ => throw new Exception("Disposal failed"));
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(connection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(connection);
         
         var pool = CreatePool();
         var obtainedConnection = await pool.Get(TestContext.Current.CancellationToken);
@@ -240,7 +239,7 @@ public class ConnectionPoolTests
         var connections = new List<IConnection>();
 
         var i = 0;
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(_ =>
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(_ =>
         {
             var connection =  CreateMockConnection(i++);
             connections.Add(connection);
@@ -291,7 +290,7 @@ public class ConnectionPoolTests
         // Arrange
         var currentConnectionIndex = 0;
         _connectionFactory
-            .CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout)
+            .CreateConnection(_loggerFactory, _options.Host)
             .Returns(_ => CreateMockConnection(currentConnectionIndex++));
         
         var pool = CreatePool();
@@ -349,9 +348,9 @@ public class ConnectionPoolTests
     {
         // Arrange
         var connection = CreateMockConnection(1);
-        connection.Connect(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        connection.Connect(Arg.Any<CancellationToken>())
             .Throws(new Exception("Connection failed"));
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(connection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(connection);
     
         var pool = CreatePool();
     
@@ -377,7 +376,7 @@ public class ConnectionPoolTests
         for (int i = 0; i < maxConnections; i++)
         {
             var connection = CreateMockConnection(i);
-            _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(connection);
+            _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(connection);
             acquiredConnections.Add(await pool.Get(TestContext.Current.CancellationToken));
         }
     
@@ -390,7 +389,7 @@ public class ConnectionPoolTests
     
         // Should be able to get another connection now
         var newConnection = CreateMockConnection(100);
-        _connectionFactory.CreateConnection(_loggerFactory, _options.ConnectionTimeout, _options.SendTimeout, _options.ReceiveTimeout).Returns(newConnection);
+        _connectionFactory.CreateConnection(_loggerFactory, _options.Host).Returns(newConnection);
         var result = await pool.Get(TestContext.Current.CancellationToken);
     
         // Assert
@@ -413,7 +412,7 @@ public class ConnectionPoolTests
     {
         var connection = Substitute.For<IConnection>();
         connection.Id.Returns(id);
-        connection.Connect(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        connection.Connect(Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
         return connection;
     }

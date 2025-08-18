@@ -1,9 +1,12 @@
-using GearQueue.Network;
-
 namespace GearQueue.Options;
 
 public class ConnectionPoolOptions
 {
+    /// <summary>
+    /// Gearman job server connection info
+    /// </summary>
+    public required GearQueueHostOptions Host { get; set; }
+    
     /// <summary>
     /// The maximum time a connection is kept alive and re-used. 
     /// </summary>
@@ -17,12 +20,7 @@ public class ConnectionPoolOptions
     /// <summary>
     /// The maximum number of connections kept alive by the pool at a time.
     /// </summary>
-    public int MaxConnections { get; init; } = 50;
-    
-    /// <summary>
-    /// Gearman job server connection info
-    /// </summary>
-    public required ServerInfo ServerInfo { get; set; }
+    public int MaxConnections { get; set; } = 50;
     
     /// <summary>
     /// The error threshold after which the pool is marked as unhealthy (Default 5)
@@ -33,19 +31,4 @@ public class ConnectionPoolOptions
     /// The time after which an unhealthy pool will attempt to attempt new connections  
     /// </summary>
     public TimeSpan HealthCheckInterval { get; set; } = TimeSpan.FromSeconds(5);
-    
-    /// <summary>
-    /// Socket connection timeout
-    /// </summary>
-    public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(5);
-    
-    /// <summary>
-    /// Socket receive packet timeout
-    /// </summary>
-    public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(5);
-    
-    /// <summary>
-    /// Socket send packet timeout
-    /// </summary>
-    public TimeSpan SendTimeout { get; set; } = TimeSpan.FromSeconds(3);
 }

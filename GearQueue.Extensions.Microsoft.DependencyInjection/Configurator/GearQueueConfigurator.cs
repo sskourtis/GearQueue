@@ -254,17 +254,4 @@ public class GearQueueConfigurator
                 s.GetRequiredService<ILoggerFactory>());
         });
     }
-    
-    private class CustomValidator<T>(IGearQueueValidator<T> validator) : IValidateOptions<T>
-        where T : class
-    {
-        public ValidateOptionsResult Validate(string? name, T options)
-        {
-            var result = validator.Validate(options);
-        
-            return result.IsValid 
-                ? ValidateOptionsResult.Success 
-                : ValidateOptionsResult.Fail(result.Errors);
-        }
-    }
 }

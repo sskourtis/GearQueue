@@ -17,6 +17,14 @@ public class GearQueueBatchConsumer(
     /// <param name="cancellationToken"></param>
     public async Task StartConsuming(CancellationToken cancellationToken)
     {
+        foreach (var (_, type) in handlers)
+        {
+            if (!type.IsAssignableTo(typeof(IGearQueueBatchHandler)))
+            {
+                throw new ApplicationException($"Handler {type.FullName} does not implement IGearQueueBatchHandler");
+            }
+        }
+        
         var logger = loggerFactory.CreateLogger<GearQueueConsumer>();
 
         var batchCoordinator = new BatchHandlerExecutionCoordinator(loggerFactory, handlerExecutor, options, handlers.First().Value);

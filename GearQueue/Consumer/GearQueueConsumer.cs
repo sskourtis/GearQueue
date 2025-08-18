@@ -18,6 +18,14 @@ public class GearQueueConsumer(
     /// <exception cref="ArgumentException">Unsupported concurrency strategy</exception>
     public async Task StartConsuming(CancellationToken cancellationToken)
     {
+        foreach (var (_, type) in handlers)
+        {
+            if (!type.IsAssignableTo(typeof(IGearQueueHandler)))
+            {
+                throw new ApplicationException($"Handler {type.FullName} does not implement IGearQueueHandler");
+            }
+        }
+        
         var logger = loggerFactory.CreateLogger<GearQueueConsumer>();
         
         var coordinators = new List<IHandlerExecutionCoordinator>();

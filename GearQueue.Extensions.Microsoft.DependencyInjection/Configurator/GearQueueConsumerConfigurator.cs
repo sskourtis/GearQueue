@@ -1,3 +1,4 @@
+using GearQueue.Consumer;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
@@ -11,7 +12,8 @@ public class GearQueueConsumerConfigurator
         _consumerRegistration = consumerRegistration;
     }
 
-    public GearQueueConsumerConfigurator SetHandler<T>(string functionName, ServiceLifetime lifetime = ServiceLifetime.Transient)
+    public GearQueueConsumerConfigurator SetHandler<T>(string functionName, ServiceLifetime lifetime = ServiceLifetime.Transient) 
+        where T : IGearQueueBaseHandler
     {
         _consumerRegistration.HandlerMapping[functionName] = (typeof(T), lifetime);
         return this;

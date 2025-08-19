@@ -13,7 +13,7 @@ public class AsynchronousHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory) : IHandlerExecutionCoordinator
 {
     private readonly ILogger<AsynchronousHandlerExecutionCoordinator> _logger = loggerFactory.CreateLogger<AsynchronousHandlerExecutionCoordinator>();
-    private readonly ConcurrentDictionary<int, Func<string, JobStatus, Task>> _jobResultCallback = new();
+    private readonly Dictionary<int, Func<string, JobStatus, Task>> _jobResultCallback = new();
     private readonly ConcurrentDictionary<Guid, Task> _activeJobs = new();
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);
     
@@ -22,8 +22,13 @@ public class AsynchronousHandlerExecutionCoordinator(
         _jobResultCallback[connectionId] = callback;
     }
 
-    public async Task<JobStatus?> ArrangeExecution(int connectionId, JobAssign job, CancellationToken cancellationToken)
+    public async Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken)
     {
+        if (job is null)
+        {
+            return new ExecutionResult();
+        }
+        
         await _handlerSemaphore.WaitAsync(cancellationToken);
         
         var batchId = Guid.NewGuid();
@@ -32,7 +37,7 @@ public class AsynchronousHandlerExecutionCoordinator(
         
         _activeJobs.TryAdd(batchId, task);
 
-        return null;
+        return new ExecutionResult();
     }
 
     public async Task WaitAllExecutions()

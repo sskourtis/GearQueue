@@ -1,5 +1,4 @@
 using GearQueue.Consumer;
-using GearQueue.Consumer.Batch;
 using GearQueue.Extensions.Microsoft.DependencyInjection.HandlerExecutors;
 using GearQueue.Options;
 using GearQueue.Options.Parser;
@@ -233,26 +232,15 @@ public class GearQueueConfigurator
                 ? new GearQueueMicrosoftScopedHandlerExecutor(s.GetRequiredService<IServiceScopeFactory>())
                 : new GearQueueMicrosoftHandlerExecutor(s.GetRequiredService<IServiceProvider>());
 
-            var handlers = registration.HandlerMapping.ToDictionary(x => x.Key, x => x.Value.Item1);
-            
-            if (options.Batch is not null)
+            if (options.Batch is not null && registration.HandlerMapping.Count != 1)
             {
-                if (registration.HandlerMapping.Count != 1)
-                {
-                    throw new ArgumentException("Batch consumer must have exactly one handler");
-                }
-                
-                return new GearQueueBatchConsumer(
-                    options,
-                    handlerExecutor,
-                    handlers,
-                    s.GetRequiredService<ILoggerFactory>());
+                throw new ArgumentException("Batch consumer must have exactly one handler");
             }
 
             return new GearQueueConsumer(
                 options,
                 handlerExecutor,
-                handlers,
+                registration.HandlerMapping.ToDictionary(x => x.Key, x => x.Value.Item1),
                 s.GetRequiredService<ILoggerFactory>());
         });
     }

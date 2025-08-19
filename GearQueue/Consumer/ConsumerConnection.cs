@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using GearQueue.Consumer.Coordinators;
 using GearQueue.Logging;
 using GearQueue.Network;
 using GearQueue.Options;
@@ -7,31 +8,23 @@ using GearQueue.Protocol.Request;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
 
-namespace GearQueue.Consumer.Batch;
+namespace GearQueue.Consumer;
 
-internal class GearQueueBatchConsumerInstance(
+internal class ConsumerConnection(
     GearQueueConsumerHostsOptions options,
-    IBatchHandlerExecutionCoordinator batchHandlerExecutionCoordinator,
-    string function,
-    ILoggerFactory loggerFactory)
+    ICollection<string> functions,
+    IHandlerExecutionCoordinator handlerExecutionCoordinator,
+    ILoggerFactory loggerFactory) : IDisposable
 {
-    private readonly ILogger<GearQueueBatchConsumerInstance> _logger = loggerFactory.CreateLogger<GearQueueBatchConsumerInstance>();
-    private readonly Connection _connection = new(loggerFactory, options.Host);
+    private readonly ILogger<IGearQueueConsumer> _logger = loggerFactory.CreateLogger<IGearQueueConsumer>();
 
+    private readonly Connection _connection = new(loggerFactory, options.Host);
+    
     internal void RegisterResultCallback()
     {
-        batchHandlerExecutionCoordinator.RegisterAsyncResultCallback(_connection.Id, async (jobHandle, status) =>
+        handlerExecutionCoordinator.RegisterAsyncResultCallback(_connection.Id, async (jobHandle, status) =>
         {
-            if (status == JobStatus.Success)
-            {
-                await _connection.SendPacket(RequestFactory.WorkComplete(jobHandle),
-                    CancellationToken.None).ConfigureAwait(false);
-            }
-            else
-            {
-                await _connection.SendPacket(RequestFactory.WorkFail(jobHandle),
-                    CancellationToken.None).ConfigureAwait(false);
-            }
+            await SendResult(jobHandle, status).ConfigureAwait(false);
         });
     }
     
@@ -46,12 +39,14 @@ internal class GearQueueBatchConsumerInstance(
             try
             {
                 var job = await CheckForJob(cancellationToken).ConfigureAwait(false);
-                
-                var batchTimeout = await batchHandlerExecutionCoordinator.Notify(_connection.Id, job, cancellationToken)
-                    .ConfigureAwait(false);
 
-                if (job is not null)
+                var executionResult = await handlerExecutionCoordinator.ArrangeExecution(_connection.Id, job, cancellationToken).ConfigureAwait(false);
+                    
+                if (job != null && executionResult.ResultingStatus.HasValue)
                 {
+                    // Send the result right away when it completes synchronously
+                    await SendResult(job.JobHandle, executionResult.ResultingStatus.Value).ConfigureAwait(false);
+                    
                     continue;
                 }
 
@@ -60,17 +55,28 @@ internal class GearQueueBatchConsumerInstance(
                     /*
                      * Polling is also offered as an option instead of using the PRE_SLEEP packet
                      */
-                    await Task.Delay(options.PollingDelay <= batchTimeout ? options.PollingDelay : batchTimeout,
+                    await Task.Delay(executionResult.MaximumSleepDelay.HasValue && executionResult.MaximumSleepDelay.Value < options.PollingDelay 
+                            ? executionResult.MaximumSleepDelay.Value 
+                            : options.PollingDelay,
                         cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 
                 await _connection.SendPacket(RequestFactory.PreSleep(), cancellationToken).ConfigureAwait(false);
+
+                ResponsePacket? noopResponse;
+
+                if (executionResult.MaximumSleepDelay.HasValue)
+                {
+                    using var cancellationTokenSource = new CancellationTokenSource(executionResult.MaximumSleepDelay.Value);
+                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
                 
-                using var cancellationTokenSource = new CancellationTokenSource(batchTimeout);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-                
-                var noopResponse = await _connection.GetPacket(cancellationTokenSource.Token).ConfigureAwait(false);
+                    noopResponse = await _connection.GetPacket(cancellationTokenSource.Token).ConfigureAwait(false);
+                }
+                else
+                {
+                    noopResponse = await _connection.GetPacket(cancellationToken).ConfigureAwait(false);    
+                }
 
                 if (noopResponse is not null && noopResponse.Value.Type is not PacketType.Noop)
                 {
@@ -85,7 +91,28 @@ internal class GearQueueBatchConsumerInstance(
             }
         }
     }
-    
+
+    private async Task SendResult(string jobHandle, JobStatus jobStatus)
+    {
+        try
+        {
+            if (jobStatus == JobStatus.Success)
+            {
+                await _connection.SendPacket(RequestFactory.WorkComplete(jobHandle),
+                    CancellationToken.None).ConfigureAwait(false);
+            }
+            else
+            {
+                await _connection.SendPacket(RequestFactory.WorkFail(jobHandle),
+                    CancellationToken.None).ConfigureAwait(false);
+            }
+        }
+        catch (SocketException e)
+        {
+            _logger.LogSocketError(_connection.Options.Hostname, _connection.Options.Port, e);
+        }
+    }
+
     private async Task Connect(CancellationToken cancellationToken)
     {
         while (true)
@@ -93,15 +120,18 @@ internal class GearQueueBatchConsumerInstance(
             try
             {
                 await _connection.Connect(cancellationToken).ConfigureAwait(false);
-                
-                await _connection.SendPacket(RequestFactory.CanDo(function), cancellationToken).ConfigureAwait(false);
+
+                foreach (var function in functions)
+                {
+                    await _connection.SendPacket(RequestFactory.CanDo(function), cancellationToken).ConfigureAwait(false);    
+                }
 
                 break;
             }
             catch (SocketException e)
             {
-                _logger.LogSocketError(options.Host.Hostname,
-                    options.Host.Port, 
+                _logger.LogSocketError(_connection.Options.Hostname,
+                    _connection.Options.Port, 
                     options.ReconnectTimeout,
                     e);
                 await Task.Delay(options.ReconnectTimeout, cancellationToken).ConfigureAwait(false);
@@ -110,7 +140,7 @@ internal class GearQueueBatchConsumerInstance(
     }
     
     private static readonly RequestPacket GrabJobPacket = RequestFactory.GrabJob();
-    
+
     private async Task<JobAssign?> CheckForJob(CancellationToken cancellationToken = default)
     {
         await _connection.SendPacket(GrabJobPacket, cancellationToken).ConfigureAwait(false);
@@ -133,5 +163,10 @@ internal class GearQueueBatchConsumerInstance(
             default:
                 return null;
         }
+    }
+
+    public void Dispose()
+    {
+        _connection.Dispose();
     }
 }

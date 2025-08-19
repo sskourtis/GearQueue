@@ -35,6 +35,8 @@ internal class Connection : IDisposable, IConnection
     
     private readonly GearQueueHostOptions _options;
     
+    internal GearQueueHostOptions Options => _options;
+    
     public Connection(ILoggerFactory loggerFactory, GearQueueHostOptions options)
     {
         _logger = loggerFactory.CreateLogger<Connection>();

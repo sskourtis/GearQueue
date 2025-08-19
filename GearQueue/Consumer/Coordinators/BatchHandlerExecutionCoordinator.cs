@@ -4,20 +4,13 @@ using GearQueue.Options;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
 
-namespace GearQueue.Consumer.Batch;
-
-public interface IBatchHandlerExecutionCoordinator
-{
-    void RegisterAsyncResultCallback(int connectionId, Func<string, JobStatus, Task> callback);
-    Task<TimeSpan> Notify(int connectionId, JobAssign? job, CancellationToken cancellationToken);
-    Task WaitAllHandlers();
-}
+namespace GearQueue.Consumer.Coordinators;
 
 public class BatchHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
     IGearQueueHandlerExecutor handlerExecutor,
     GearQueueConsumerOptions options,
-    Type handlerType) : IBatchHandlerExecutionCoordinator
+    Type handlerType) : IHandlerExecutionCoordinator
 {
     private readonly ILogger<BatchHandlerExecutionCoordinator> _logger = loggerFactory.CreateLogger<BatchHandlerExecutionCoordinator>();
     private readonly List<(int ConnectionId, JobAssign Job)> _jobs = new(options.Batch!.Size);
@@ -31,8 +24,8 @@ public class BatchHandlerExecutionCoordinator(
     {
         _jobResultCallback[connectionId] = callback;
     }
-    
-    public async Task<TimeSpan> Notify(int connectionId, JobAssign? job, CancellationToken cancellationToken)
+
+    public async Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken)
     {
         List<(int, JobAssign)> batch;
         
@@ -74,7 +67,7 @@ public class BatchHandlerExecutionCoordinator(
         return options.Batch!.TimeLimit;
     }
 
-    public async Task WaitAllHandlers()
+    public async Task WaitAllExecutions()
     {
         await Task.WhenAll(_activeJobHandler.Values);
     }

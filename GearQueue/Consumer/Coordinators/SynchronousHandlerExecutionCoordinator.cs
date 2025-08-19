@@ -15,8 +15,13 @@ public class SynchronousHandlerExecutionCoordinator(
     {
     }
 
-    public async Task<JobStatus?> ArrangeExecution(int connectionId, JobAssign job, CancellationToken cancellationToken)
+    public async Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken)
     {
+        if (job is null)
+        {
+            return new ExecutionResult();
+        }
+        
         try
         {
             var jobContext = new JobContext(job, cancellationToken);

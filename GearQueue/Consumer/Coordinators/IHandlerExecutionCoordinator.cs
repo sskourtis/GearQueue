@@ -19,7 +19,7 @@ internal interface IHandlerExecutionCoordinator
     /// <param name="job"></param>
     /// <param name="cancellationToken"></param>
     /// <returns>Returns the job status when it is executed synchronously, otherwise it returns null</returns>
-    Task<JobStatus?> ArrangeExecution(int connectionId, JobAssign job, CancellationToken cancellationToken);
+    Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken);
     
     Task WaitAllExecutions();
 }

@@ -1,6 +1,6 @@
 namespace GearQueue.UnitTests.Consumer;
 
-public class GearQueueConsumerInstanceTests
+public class ConsumerConnectionTests
 {
     // TODO
 }

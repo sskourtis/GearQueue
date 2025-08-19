@@ -30,7 +30,17 @@ public class GearQueueConsumer(
         
         var coordinators = new List<IHandlerExecutionCoordinator>();
 
-        if (options.ConcurrencyStrategy == ConcurrencyStrategy.AcrossServers)
+        if (options.Batch is not null)
+        {
+            if (options.ConcurrencyStrategy != ConcurrencyStrategy.AcrossServers)
+            {
+                throw new Exception("Invalid concurrency strategy for batch consumer");
+            }
+            
+            coordinators.Add(
+                new BatchHandlerExecutionCoordinator(loggerFactory, handlerExecutor, options, handlers.Single().Value));
+        }
+        else if (options.ConcurrencyStrategy == ConcurrencyStrategy.AcrossServers)
         {
             coordinators.Add(
                 new AsynchronousHandlerExecutionCoordinator(handlerExecutor, handlers, options, loggerFactory));
@@ -80,7 +90,11 @@ public class GearQueueConsumer(
                                 break;
                         }
                         
-                        return new GearQueueConsumerInstance(serverOptions, handlers.Keys, coordinator, loggerFactory);
+                        var connection = new ConsumerConnection(serverOptions, handlers.Keys, coordinator, loggerFactory);
+
+                        connection.RegisterResultCallback();
+                        
+                        return connection;
                     });
             })
             .SelectMany(x => x);

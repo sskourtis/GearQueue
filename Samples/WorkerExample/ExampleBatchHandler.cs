@@ -1,18 +1,17 @@
-using GearQueue.BatchConsumer;
 using GearQueue.Consumer;
 using SampleUtils;
 
 namespace WorkerExample;
 
-public class ExampleBatchHandler(ILogger<ExampleBatchHandler> logger) : IGearQueueBatchHandler
+public class ExampleBatchHandler(ILogger<ExampleBatchHandler> logger) : IGearQueueHandler
 {
     private static readonly InvocationsTracker InvocationsTracker = new();
     
-    public Task<JobStatus> Consume(BatchJobContext job)
+    public Task<JobStatus> Consume(JobContext job)
     {
-        //logger.LogInformation("Consuming batch job {Job}", job.Jobs.Count());
+        logger.LogInformation("Consuming batch job {Job}", job.Batches.Count());
 
-        var (total, perSecond) = InvocationsTracker.InvokeAndGetInvocations(job.Jobs.Count());
+        var (total, perSecond) = InvocationsTracker.InvokeAndGetInvocations(job.Batches.Count());
 
         if (perSecond.HasValue)
         {

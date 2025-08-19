@@ -1,3 +1,4 @@
+using System.Text;
 using GearQueue.Consumer;
 using SampleUtils;
 
@@ -9,6 +10,7 @@ public class ExampleHandler(ILogger<ExampleHandler> logger) : IGearQueueHandler
     
     public async Task<JobStatus> Consume(JobContext job)
     {
+        logger.LogInformation(Encoding.UTF8.GetString(job.Data));
         var (total, perSecond) = InvocationsTracker.InvokeAndGetInvocations();
 
         if (perSecond.HasValue)

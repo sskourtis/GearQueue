@@ -229,6 +229,12 @@ public class GearQueueConfigurator
                 throw new ArgumentException("There must be at least one handler mapping");
             }
             
+            IGearQueueHandlerExecutor handlerExecutor = options.CreateScope
+                ? new GearQueueMicrosoftScopedHandlerExecutor(s.GetRequiredService<IServiceScopeFactory>())
+                : new GearQueueMicrosoftHandlerExecutor(s.GetRequiredService<IServiceProvider>());
+
+            var handlers = registration.HandlerMapping.ToDictionary(x => x.Key, x => x.Value.Item1);
+            
             if (options.Batch is not null)
             {
                 if (registration.HandlerMapping.Count != 1)
@@ -238,19 +244,15 @@ public class GearQueueConfigurator
                 
                 return new GearQueueBatchConsumer(
                     options,
-                    options.CreateScope
-                        ? new GearQueueMicrosoftBatchScopedHandlerExecutor(s.GetRequiredService<IServiceScopeFactory>())
-                        : new GearQueueMicrosoftBatchHandlerExecutor(s.GetRequiredService<IServiceProvider>()),
-                    registration.HandlerMapping.ToDictionary(x => x.Key, x => x.Value.Item1),
+                    handlerExecutor,
+                    handlers,
                     s.GetRequiredService<ILoggerFactory>());
             }
 
             return new GearQueueConsumer(
                 options,
-                options.CreateScope
-                    ? new GearQueueMicrosoftScopedHandlerExecutor(s.GetRequiredService<IServiceScopeFactory>())
-                    : new GearQueueMicrosoftHandlerExecutor(s.GetRequiredService<IServiceProvider>()),
-                registration.HandlerMapping.ToDictionary(x => x.Key, x => x.Value.Item1),
+                handlerExecutor,
+                handlers,
                 s.GetRequiredService<ILoggerFactory>());
         });
     }

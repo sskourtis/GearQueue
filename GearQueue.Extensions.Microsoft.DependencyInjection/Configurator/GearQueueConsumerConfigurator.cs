@@ -13,7 +13,7 @@ public class GearQueueConsumerConfigurator
     }
 
     public GearQueueConsumerConfigurator SetHandler<T>(string functionName, ServiceLifetime lifetime = ServiceLifetime.Transient) 
-        where T : IGearQueueBaseHandler
+        where T : IGearQueueHandler
     {
         _consumerRegistration.HandlerMapping[functionName] = (typeof(T), lifetime);
         return this;

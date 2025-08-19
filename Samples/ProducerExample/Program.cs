@@ -67,6 +67,21 @@ app.MapGet("/produce", async (IGearQueueProducer producer, JobCounter counter) =
     })
     .WithName("Produce");
 
+app.MapGet("/produce-batch", async (IGearQueueProducer producer, JobCounter counter) =>
+    {
+        var result = await producer.Produce("test-batch-function", Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}"));
+
+        if (result)
+        {
+            counter.Increment();
+            
+            return Results.Ok("Ok");
+        }
+
+        return Results.InternalServerError();
+    })
+    .WithName("Produce Batch");
+
 app.MapGet("/produce-random", async (IGearQueueProducer producer, JobCounter counter) =>
     {
         var result = await producer.Produce(Random.Shared.Next(10) > 5 

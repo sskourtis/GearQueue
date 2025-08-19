@@ -16,7 +16,7 @@ public interface IBatchHandlerExecutionCoordinator
 
 public class BatchHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
-    IGearQueueBatchHandlerExecutor handlerExecutor,
+    IGearQueueHandlerExecutor handlerExecutor,
     GearQueueConsumerOptions options,
     Type handlerType) : IBatchHandlerExecutionCoordinator
 {
@@ -87,7 +87,7 @@ public class BatchHandlerExecutionCoordinator(
     {
         try
         {
-            var jobContext = new BatchJobContext(jobs.Select(j => j.Job), cancellationToken);
+            var jobContext = new JobContext(jobs.Select(j => j.Job), cancellationToken);
 
             var (success, jobStatus) = await handlerExecutor.TryExecute(handlerType, jobContext)
                 .ConfigureAwait(false);

@@ -7,7 +7,7 @@ namespace GearQueue.BatchConsumer;
 
 public class GearQueueBatchConsumer(
     GearQueueConsumerOptions options,
-    IGearQueueBatchHandlerExecutor handlerExecutor,
+    IGearQueueHandlerExecutor handlerExecutor,
     Dictionary<string, Type> handlers,
     ILoggerFactory loggerFactory) : IGearQueueConsumer
 {
@@ -19,7 +19,7 @@ public class GearQueueBatchConsumer(
     {
         foreach (var (_, type) in handlers)
         {
-            if (!type.IsAssignableTo(typeof(IGearQueueBatchHandler)))
+            if (!type.IsAssignableTo(typeof(IGearQueueHandler)))
             {
                 throw new ApplicationException($"Handler {type.FullName} does not implement IGearQueueBatchHandler");
             }

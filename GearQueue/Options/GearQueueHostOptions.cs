@@ -20,10 +20,10 @@ public sealed class GearQueueHostOptions
     /// <summary>
     /// Socket receive packet timeout
     /// </summary>
-    public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(5);
+    public TimeSpan ReceiveTimeout { get; set; } = TimeSpan.FromSeconds(30);
     
     /// <summary>
     /// Socket send packet timeout
     /// </summary>
-    public TimeSpan SendTimeout { get; set; } = TimeSpan.FromSeconds(3);
+    public TimeSpan SendTimeout { get; set; } = TimeSpan.FromSeconds(5);
 }

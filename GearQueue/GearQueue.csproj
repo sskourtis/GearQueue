@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
+      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="9.0.7" PrivateAssets="true" />
     </ItemGroup>
 
 </Project>

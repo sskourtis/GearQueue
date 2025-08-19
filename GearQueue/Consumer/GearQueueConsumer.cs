@@ -44,7 +44,7 @@ public class GearQueueConsumer(
             }
             
             coordinators.Add(
-                new BatchHandlerExecutionCoordinator(loggerFactory, handlerExecutor, options, handlers.Single().Value));
+                new BatchHandlerExecutionCoordinator(loggerFactory, handlerExecutor, options, handlers));
         }
         else if (options.ConcurrencyStrategy == ConcurrencyStrategy.AcrossServers)
         {

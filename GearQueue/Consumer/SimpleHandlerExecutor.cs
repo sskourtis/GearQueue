@@ -1,6 +1,6 @@
 namespace GearQueue.Consumer;
 
-public sealed class GearQueueHandlerExecutor : IGearQueueHandlerExecutor
+internal sealed class SimpleHandlerExecutor : IGearQueueHandlerExecutor
 {
     public async Task<(bool Success, JobStatus? Status)> TryExecute(Type handlerType, JobContext jobContext)
     {

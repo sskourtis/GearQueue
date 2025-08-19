@@ -11,6 +11,12 @@ public class GearQueueConsumer(
     Dictionary<string, Type> handlers,
     ILoggerFactory loggerFactory) : IGearQueueConsumer
 {
+    public GearQueueConsumer(GearQueueConsumerOptions options,
+        Dictionary<string, Type> handlers,
+        ILoggerFactory loggerFactory) : this(options, new SimpleHandlerExecutor(), handlers, loggerFactory)
+    {
+    }
+
     /// <summary>
     /// Starts consuming gearman jobs. The returned task will not complete until cancellation is request 
     /// </summary>

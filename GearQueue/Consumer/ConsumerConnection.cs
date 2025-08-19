@@ -34,27 +34,42 @@ internal class ConsumerConnection(
         
         await Connect(cancellationToken).ConfigureAwait(false);
         
+        ResponsePacket? outOfOrderResponsePacket = null;
+        
         while(!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var job = await CheckForJob(cancellationToken).ConfigureAwait(false);
+                // Make sure to first handle any out of order pending response packet
+                var job = outOfOrderResponsePacket?.Type switch
+                {
+                    PacketType.JobAssign => JobAssign.Create(outOfOrderResponsePacket.Value.Data),
+                    PacketType.JobAssignUniq => JobAssignUniq.Create(outOfOrderResponsePacket.Value.Data),
+                    PacketType.JobAssignAll => JobAssignAll.Create(outOfOrderResponsePacket.Value.Data),
+                    _ => await CheckForJob(cancellationToken).ConfigureAwait(false),
+                };
 
+                outOfOrderResponsePacket = null;
+                
                 var executionResult = await handlerExecutionCoordinator.ArrangeExecution(_connection.Id, job, cancellationToken).ConfigureAwait(false);
                     
-                if (job != null && executionResult.ResultingStatus.HasValue)
+                if (job != null)
                 {
-                    // Send the result right away when it completes synchronously
-                    await SendResult(job.JobHandle, executionResult.ResultingStatus.Value).ConfigureAwait(false);
+                    if (executionResult.ResultingStatus.HasValue)
+                    {
+                        // Send the result right away when it completes synchronously
+                        await SendResult(job.JobHandle, executionResult.ResultingStatus.Value).ConfigureAwait(false);   
+                    }
                     
                     continue;
                 }
 
-                if (!options.UsePreSleep)
+                if (!options.UsePreSleep || 
+                    // Avoid using presleep if we have to wake up less than 200ms from now.
+                    // This is because the "GetPacket" after presleep is not stable if the cancellation token is extremely short.
+                    // The instability is that we won't read the response packets after presleep in the correct order.
+                    (executionResult.MaximumSleepDelay.HasValue && executionResult.MaximumSleepDelay <= TimeSpan.FromMilliseconds(200)))
                 {
-                    /*
-                     * Polling is also offered as an option instead of using the PRE_SLEEP packet
-                     */
                     await Task.Delay(executionResult.MaximumSleepDelay.HasValue && executionResult.MaximumSleepDelay.Value < options.PollingDelay 
                             ? executionResult.MaximumSleepDelay.Value 
                             : options.PollingDelay,
@@ -63,15 +78,15 @@ internal class ConsumerConnection(
                 }
                 
                 await _connection.SendPacket(RequestFactory.PreSleep(), cancellationToken).ConfigureAwait(false);
-
+                
                 ResponsePacket? noopResponse;
 
                 if (executionResult.MaximumSleepDelay.HasValue)
                 {
                     using var cancellationTokenSource = new CancellationTokenSource(executionResult.MaximumSleepDelay.Value);
                     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-                
-                    noopResponse = await _connection.GetPacket(cancellationTokenSource.Token).ConfigureAwait(false);
+
+                    noopResponse = await _connection.GetPacket(linkedCts.Token).ConfigureAwait(false);
                 }
                 else
                 {
@@ -81,6 +96,10 @@ internal class ConsumerConnection(
                 if (noopResponse is not null && noopResponse.Value.Type is not PacketType.Noop)
                 {
                     _logger.LogUnexpectedResponseType(noopResponse?.Type, PacketType.Noop);
+                    
+                    // If we receive a packet out of order after PRE_SLEEP, we need to store it and check if it contains a new job.
+                    // This should never happen under normal conditions. The mechanism is in place mostly for peace of mind. 
+                    outOfOrderResponsePacket = noopResponse;
                 }
             }
             catch (SocketException e)

@@ -1,11 +1,10 @@
 using System.Collections.Concurrent;
-using GearQueue.Consumer;
 using GearQueue.Logging;
 using GearQueue.Options;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
 
-namespace GearQueue.BatchConsumer;
+namespace GearQueue.Consumer.Batch;
 
 public interface IBatchHandlerExecutionCoordinator
 {

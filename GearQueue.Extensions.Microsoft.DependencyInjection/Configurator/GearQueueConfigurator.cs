@@ -1,5 +1,5 @@
-using GearQueue.BatchConsumer;
 using GearQueue.Consumer;
+using GearQueue.Consumer.Batch;
 using GearQueue.Extensions.Microsoft.DependencyInjection.HandlerExecutors;
 using GearQueue.Options;
 using GearQueue.Options.Parser;

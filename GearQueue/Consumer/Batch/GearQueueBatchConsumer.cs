@@ -1,9 +1,8 @@
-using GearQueue.Consumer;
 using GearQueue.Logging;
 using GearQueue.Options;
 using Microsoft.Extensions.Logging;
 
-namespace GearQueue.BatchConsumer;
+namespace GearQueue.Consumer.Batch;
 
 public class GearQueueBatchConsumer(
     GearQueueConsumerOptions options,

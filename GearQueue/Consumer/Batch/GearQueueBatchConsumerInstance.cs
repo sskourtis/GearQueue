@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using GearQueue.Consumer;
 using GearQueue.Logging;
 using GearQueue.Network;
 using GearQueue.Options;
@@ -8,7 +7,7 @@ using GearQueue.Protocol.Request;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
 
-namespace GearQueue.BatchConsumer;
+namespace GearQueue.Consumer.Batch;
 
 internal class GearQueueBatchConsumerInstance(
     GearQueueConsumerHostsOptions options,

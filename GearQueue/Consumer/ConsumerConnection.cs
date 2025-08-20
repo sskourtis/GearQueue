@@ -13,7 +13,7 @@ namespace GearQueue.Consumer;
 internal class ConsumerConnection(
     GearQueueConsumerHostsOptions options,
     ICollection<string> functions,
-    IHandlerExecutionCoordinator handlerExecutionCoordinator,
+    AbstractHandlerExecutionCoordinator abstractHandlerExecutionCoordinator,
     ILoggerFactory loggerFactory) : IDisposable
 {
     private readonly ILogger<IGearQueueConsumer> _logger = loggerFactory.CreateLogger<IGearQueueConsumer>();
@@ -22,7 +22,7 @@ internal class ConsumerConnection(
     
     internal void RegisterResultCallback()
     {
-        handlerExecutionCoordinator.RegisterAsyncResultCallback(_connection.Id, async (jobHandle, status) =>
+        abstractHandlerExecutionCoordinator.RegisterAsyncResultCallback(_connection.Id, async (jobHandle, status) =>
         {
             await SendResult(jobHandle, status).ConfigureAwait(false);
         });
@@ -51,7 +51,7 @@ internal class ConsumerConnection(
 
                 outOfOrderResponsePacket = null;
                 
-                var executionResult = await handlerExecutionCoordinator.ArrangeExecution(_connection.Id, job, cancellationToken).ConfigureAwait(false);
+                var executionResult = await abstractHandlerExecutionCoordinator.ArrangeExecution(_connection.Id, job, cancellationToken).ConfigureAwait(false);
                     
                 if (job != null)
                 {

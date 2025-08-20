@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using GearQueue.Logging;
 using GearQueue.Options;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
@@ -7,26 +6,23 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace GearQueue.Consumer.Coordinators;
 
-public class BatchHandlerExecutionCoordinator(
+internal class BatchAbstractHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
     IGearQueueHandlerExecutor handlerExecutor,
     GearQueueConsumerOptions options,
-    Dictionary<string, Type> handlers) : IHandlerExecutionCoordinator
+    Dictionary<string, Type> handlers) 
+    : AbstractHandlerExecutionCoordinator( 
+        loggerFactory,
+        handlerExecutor, 
+        handlers,
+        new Dictionary<int, Func<string, JobResult, Task>>(), 
+        new ConcurrentDictionary<Guid, Task>())
 {
-    private readonly ILogger<BatchHandlerExecutionCoordinator> _logger = loggerFactory.CreateLogger<BatchHandlerExecutionCoordinator>();
     private readonly ObjectPool<BatchData> _batchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
     private readonly List<BatchData> _pendingBatches = [];
-    
-    private readonly Dictionary<int, Func<string, JobResult, Task>> _jobResultCallback = new();
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);
-    private readonly ConcurrentDictionary<Guid, Task> _activeJobHandler = new();
 
-    public void RegisterAsyncResultCallback(int connectionId, Func<string, JobResult, Task> callback)
-    {
-        _jobResultCallback[connectionId] = callback;
-    }
-
-    public async Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken)
+    internal override async Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken)
     {
         var (nextTimeout, completedBatches) = GetCompletedBatches(connectionId, job);
 
@@ -39,7 +35,7 @@ public class BatchHandlerExecutionCoordinator(
                 var batchId = Guid.NewGuid();
 
                 var task = CallHandler(batchId, batch, cancellationToken);
-                _activeJobHandler.TryAdd(batchId, task);
+                ActiveJobs!.TryAdd(batchId, task);
             }
         }
 
@@ -111,11 +107,6 @@ public class BatchHandlerExecutionCoordinator(
             : (minimumNextTimeout.Value, completedBatches);
     }
 
-    public async Task WaitAllExecutions()
-    {
-        await Task.WhenAll(_activeJobHandler.Values);
-    }
-
     private async Task CallHandler(
         Guid batchProcessingId,
         BatchData batchData, 
@@ -123,49 +114,24 @@ public class BatchHandlerExecutionCoordinator(
     {
         try
         {
-            if (!handlers.TryGetValue(batchData.Function, out var handlerType))
-            {
-                _logger.LogMissingHandlerType(batchData.Function);
-                throw new Exception("Handler not found");
-            }
-            
             var jobContext = new JobContext(batchData.Jobs.Select(j => j.Job), cancellationToken);
-
-            var (success, jobResult) = await handlerExecutor.TryExecute(handlerType, jobContext)
-                .ConfigureAwait(false);
-
-            if (!success)
+            
+            var result = await InvokeHandler(batchData.Function, jobContext, cancellationToken);
+            
+            foreach (var job in batchData.Jobs)
             {
-                _logger.LogHandlerTypeCreationFailure(handlerType, batchData.Function);
+                if (JobResultCallback!.TryGetValue(job.ConnectionId, out var callback))
+                {
+                    await callback.Invoke(job.Job.JobHandle, result)
+                        .ConfigureAwait(false);
+                }
             }
-
-            jobResult ??= JobResult.PermanentFailure;
-            
-            await NotifyCallbacksForBatch(batchData, jobResult.Value);
-        }
-        catch (Exception e)
-        {
-            _logger.LogConsumerException(e);
-            
-            await NotifyCallbacksForBatch(batchData, JobResult.PermanentFailure);
         }
         finally
         {
             _batchDataPool.Return(batchData);
             _handlerSemaphore.Release();
-            _activeJobHandler.Remove(batchProcessingId, out _);
-        }
-    }
-
-    private async Task NotifyCallbacksForBatch(BatchData batchData, JobResult jobResult)
-    {
-        foreach (var job in batchData.Jobs)
-        {
-            if (_jobResultCallback.TryGetValue(job.ConnectionId, out var callback))
-            {
-                await callback.Invoke(job.Job.JobHandle, jobResult)
-                    .ConfigureAwait(false);
-            }
+            ActiveJobs!.Remove(batchProcessingId, out _);
         }
     }
 

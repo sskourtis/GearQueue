@@ -111,11 +111,11 @@ internal class ConsumerConnection(
         }
     }
 
-    private async Task SendResult(string jobHandle, JobStatus jobStatus)
+    private async Task SendResult(string jobHandle, JobResult jobResult)
     {
         try
         {
-            if (jobStatus == JobStatus.Success)
+            if (jobResult == JobResult.Success)
             {
                 await _connection.SendPacket(RequestFactory.WorkComplete(jobHandle),
                     CancellationToken.None).ConfigureAwait(false);

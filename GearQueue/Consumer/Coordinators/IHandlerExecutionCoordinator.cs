@@ -9,7 +9,7 @@ internal interface IHandlerExecutionCoordinator
     /// </summary>
     /// <param name="connectionId"></param>
     /// <param name="callback"></param>
-    void RegisterAsyncResultCallback(int connectionId, Func<string, JobStatus, Task> callback);
+    void RegisterAsyncResultCallback(int connectionId, Func<string, JobResult, Task> callback);
     
     /// <summary>
     /// Accepts a job and arranges the execution of the job. Depending on the implementation, the job may be

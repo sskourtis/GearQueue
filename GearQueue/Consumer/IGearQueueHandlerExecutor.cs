@@ -2,5 +2,5 @@ namespace GearQueue.Consumer;
 
 public interface IGearQueueHandlerExecutor
 {
-    Task<(bool Success, JobStatus? Status)> TryExecute(Type handlerType, JobContext jobContext);
+    Task<(bool Success, JobResult? Status)> TryExecute(Type handlerType, JobContext jobContext);
 }

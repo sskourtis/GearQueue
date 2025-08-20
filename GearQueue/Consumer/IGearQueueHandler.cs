@@ -2,5 +2,5 @@ namespace GearQueue.Consumer;
 
 public interface IGearQueueHandler
 {
-    Task<JobStatus> Consume(JobContext job);
+    Task<JobResult> Consume(JobContext job);
 }

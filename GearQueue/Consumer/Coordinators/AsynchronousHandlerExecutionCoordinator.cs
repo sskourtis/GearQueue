@@ -13,11 +13,11 @@ public class AsynchronousHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory) : IHandlerExecutionCoordinator
 {
     private readonly ILogger<AsynchronousHandlerExecutionCoordinator> _logger = loggerFactory.CreateLogger<AsynchronousHandlerExecutionCoordinator>();
-    private readonly Dictionary<int, Func<string, JobStatus, Task>> _jobResultCallback = new();
+    private readonly Dictionary<int, Func<string, JobResult, Task>> _jobResultCallback = new();
     private readonly ConcurrentDictionary<Guid, Task> _activeJobs = new();
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);
     
-    public void RegisterAsyncResultCallback(int connectionId, Func<string, JobStatus, Task> callback)
+    public void RegisterAsyncResultCallback(int connectionId, Func<string, JobResult, Task> callback)
     {
         _jobResultCallback[connectionId] = callback;
     }
@@ -60,24 +60,24 @@ public class AsynchronousHandlerExecutionCoordinator(
                 _logger.LogMissingHandlerType(job.FunctionName);
                 if (_jobResultCallback.TryGetValue(connectionId, out var errorCallBack))
                 {
-                    await errorCallBack.Invoke(job.JobHandle, JobStatus.PermanentFailure)
+                    await errorCallBack.Invoke(job.JobHandle, JobResult.PermanentFailure)
                         .ConfigureAwait(false);
                 }
                 return;
             }
 
-            var (success, jobStatus) = await handlerExecutor.TryExecute(handlerType, jobContext).ConfigureAwait(false);
+            var (success, jobResult) = await handlerExecutor.TryExecute(handlerType, jobContext).ConfigureAwait(false);
 
             if (!success)
             {
                 _logger.LogHandlerTypeCreationFailure(handlerType, job.FunctionName);
             }
 
-            jobStatus ??= JobStatus.PermanentFailure;
+            jobResult ??= JobResult.PermanentFailure;
 
             if (_jobResultCallback.TryGetValue(connectionId, out var callback))
             {
-                await callback.Invoke(job.JobHandle, jobStatus.Value)
+                await callback.Invoke(job.JobHandle, jobResult.Value)
                     .ConfigureAwait(false);
             }
         }
@@ -87,7 +87,7 @@ public class AsynchronousHandlerExecutionCoordinator(
             
             if (_jobResultCallback.TryGetValue(connectionId, out var callback))
             {
-                await callback.Invoke(job.JobHandle, JobStatus.PermanentFailure)
+                await callback.Invoke(job.JobHandle, JobResult.PermanentFailure)
                     .ConfigureAwait(false);
             }
         }

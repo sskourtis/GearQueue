@@ -11,7 +11,7 @@ public class SynchronousHandlerExecutionCoordinator(
 {
     private readonly ILogger<SynchronousHandlerExecutionCoordinator> _logger = loggerFactory.CreateLogger<SynchronousHandlerExecutionCoordinator>();
     
-    public void RegisterAsyncResultCallback(int connectionId, Func<string, JobStatus, Task> callback)
+    public void RegisterAsyncResultCallback(int connectionId, Func<string, JobResult, Task> callback)
     {
     }
 
@@ -30,7 +30,7 @@ public class SynchronousHandlerExecutionCoordinator(
             {
                 _logger.LogMissingHandlerType(job.FunctionName);
                
-                return JobStatus.PermanentFailure;
+                return JobResult.PermanentFailure;
             }
             
             var (success, jobStatus) = await handlerExecutor.TryExecute(handlerType, jobContext).ConfigureAwait(false);
@@ -40,12 +40,12 @@ public class SynchronousHandlerExecutionCoordinator(
                 _logger.LogHandlerTypeCreationFailure(handlerType, job.FunctionName);
             }
 
-            return jobStatus ?? JobStatus.PermanentFailure;
+            return jobStatus ?? JobResult.PermanentFailure;
         }
         catch (Exception e)
         {
             _logger.LogConsumerException(e);
-            return JobStatus.PermanentFailure;
+            return JobResult.PermanentFailure;
         }
     }
 

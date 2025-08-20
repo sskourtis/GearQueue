@@ -2,14 +2,14 @@ namespace GearQueue.Consumer.Coordinators;
 
 public readonly struct ExecutionResult
 {
-    public JobStatus? ResultingStatus { get; private init; }
+    public JobResult? ResultingStatus { get; private init; }
     public TimeSpan? MaximumSleepDelay { get; private init; }
 
-    public static implicit operator ExecutionResult(JobStatus status)
+    public static implicit operator ExecutionResult(JobResult result)
     {
         return new ExecutionResult
         {
-            ResultingStatus = status,
+            ResultingStatus = result,
         };
     }
     

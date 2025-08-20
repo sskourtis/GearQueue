@@ -17,11 +17,11 @@ public class BatchHandlerExecutionCoordinator(
     private readonly ObjectPool<BatchData> _batchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
     private readonly List<BatchData> _pendingBatches = [];
     
-    private readonly Dictionary<int, Func<string, JobStatus, Task>> _jobResultCallback = new();
+    private readonly Dictionary<int, Func<string, JobResult, Task>> _jobResultCallback = new();
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);
     private readonly ConcurrentDictionary<Guid, Task> _activeJobHandler = new();
 
-    public void RegisterAsyncResultCallback(int connectionId, Func<string, JobStatus, Task> callback)
+    public void RegisterAsyncResultCallback(int connectionId, Func<string, JobResult, Task> callback)
     {
         _jobResultCallback[connectionId] = callback;
     }
@@ -131,7 +131,7 @@ public class BatchHandlerExecutionCoordinator(
             
             var jobContext = new JobContext(batchData.Jobs.Select(j => j.Job), cancellationToken);
 
-            var (success, jobStatus) = await handlerExecutor.TryExecute(handlerType, jobContext)
+            var (success, jobResult) = await handlerExecutor.TryExecute(handlerType, jobContext)
                 .ConfigureAwait(false);
 
             if (!success)
@@ -139,15 +139,15 @@ public class BatchHandlerExecutionCoordinator(
                 _logger.LogHandlerTypeCreationFailure(handlerType, batchData.Function);
             }
 
-            jobStatus ??= JobStatus.PermanentFailure;
+            jobResult ??= JobResult.PermanentFailure;
             
-            await NotifyCallbacksForBatch(batchData, jobStatus.Value);
+            await NotifyCallbacksForBatch(batchData, jobResult.Value);
         }
         catch (Exception e)
         {
             _logger.LogConsumerException(e);
             
-            await NotifyCallbacksForBatch(batchData, JobStatus.PermanentFailure);
+            await NotifyCallbacksForBatch(batchData, JobResult.PermanentFailure);
         }
         finally
         {
@@ -157,13 +157,13 @@ public class BatchHandlerExecutionCoordinator(
         }
     }
 
-    private async Task NotifyCallbacksForBatch(BatchData batchData, JobStatus jobStatus)
+    private async Task NotifyCallbacksForBatch(BatchData batchData, JobResult jobResult)
     {
         foreach (var job in batchData.Jobs)
         {
             if (_jobResultCallback.TryGetValue(job.ConnectionId, out var callback))
             {
-                await callback.Invoke(job.Job.JobHandle, jobStatus)
+                await callback.Invoke(job.Job.JobHandle, jobResult)
                     .ConfigureAwait(false);
             }
         }

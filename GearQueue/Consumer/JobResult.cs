@@ -1,6 +1,6 @@
 namespace GearQueue.Consumer;
 
-public enum JobStatus
+public enum JobResult
 {
     Success,
     Failure,

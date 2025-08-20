@@ -7,9 +7,9 @@ public class GearQueueMicrosoftScopedHandlerExecutor(
     IServiceScopeFactory serviceScopeFactory) : IGearQueueHandlerExecutor
 {
 
-    public async Task<(bool Success, JobStatus? Status)> TryExecute(Type handlerType, JobContext jobContext)
+    public async Task<(bool Success, JobResult? Status)> TryExecute(Type handlerType, JobContext jobContext)
     {
-        var scope = serviceScopeFactory.CreateScope();
+        using var scope = serviceScopeFactory.CreateScope();
         
         if (scope.ServiceProvider.GetService(handlerType) is not IGearQueueHandler handler)
         {

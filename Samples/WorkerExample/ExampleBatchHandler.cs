@@ -7,7 +7,7 @@ public class ExampleBatchHandler(ILogger<ExampleBatchHandler> logger) : IGearQue
 {
     private static readonly InvocationsTracker InvocationsTracker = new();
     
-    public Task<JobStatus> Consume(JobContext job)
+    public Task<JobResult> Consume(JobContext job)
     {
         logger.LogInformation("Consuming batch job {Job}", job.Batches.Count());
 
@@ -19,6 +19,6 @@ public class ExampleBatchHandler(ILogger<ExampleBatchHandler> logger) : IGearQue
                 total, perSecond.Value);
         }
 
-        return Task.FromResult(JobStatus.Success);
+        return Task.FromResult(JobResult.Success);
     }
 }

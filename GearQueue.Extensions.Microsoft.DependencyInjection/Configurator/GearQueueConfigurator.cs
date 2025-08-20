@@ -1,9 +1,11 @@
+using System.Reflection;
 using GearQueue.Consumer;
 using GearQueue.Extensions.Microsoft.DependencyInjection.HandlerExecutors;
 using GearQueue.Options;
 using GearQueue.Options.Parser;
 using GearQueue.Options.Validation;
 using GearQueue.Producer;
+using GearQueue.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -142,6 +144,77 @@ public class GearQueueConfigurator
         {
             _services.TryAddSingleton<IGearQueueProducerFactory, GearQueueProducerFactory>();
             _services.AddSingleton<INamedGearQueueProducer>(creator);
+        }
+    }
+    
+    public void RegisterTypedProducerFromAssembly<TSerializer>(Assembly assembly, TSerializer serializer) where TSerializer : class, IGearQueueSerializer
+    {
+        var foundTypes = assembly.GetTypes()
+            .Select(t => new
+            {
+                Type = t,
+                Function = t.GetCustomAttribute<GearQueueJobAttribute>()?.FunctionName
+            })
+            .Where(t => t.Function is not null);
+
+        foreach (var typeInfo in foundTypes)
+        {
+            var serviceType = typeof(IGearQueueProducer<>).MakeGenericType(typeInfo.Type);
+        
+            var implementationType = typeof(GearQueueProducer<>).MakeGenericType(typeInfo.Type);
+        
+            _services.TryAddSingleton(serviceType, s =>
+            {
+                var baseProducer = s.GetRequiredService<IGearQueueProducer>();
+                return Activator.CreateInstance(implementationType, typeInfo.Function, serializer, baseProducer)!;
+            });
+        }
+    }
+
+    public void RegisterTypedProducer<TJob, TSerializer>(string functionName, TSerializer serializer) where TSerializer : class, IGearQueueSerializer
+    {
+        _services.TryAddSingleton<IGearQueueProducer<TJob>>(
+            s => new GearQueueProducer<TJob>(functionName,
+                serializer,
+                s.GetRequiredService<IGearQueueProducer>()));
+    }
+    
+    public void RegisterTypedProducer<TJob, TSerializer>(string functionName, TSerializer serializer, string producerName)
+        where TSerializer : class, IGearQueueSerializer
+    {
+        _services.TryAddSingleton<IGearQueueProducer<TJob>>(
+            s =>
+            {
+                var producerFactory = s.GetRequiredService<IGearQueueProducerFactory>();
+                
+                return new GearQueueProducer<TJob>(functionName,
+                    serializer,
+                    producerFactory.GetRequired(producerName));
+            });
+    }
+    
+    public void RegisterTypedProducerFromAssembly<TSerializer>(Assembly assembly, TSerializer serializer, string producerName) where TSerializer : class, IGearQueueSerializer
+    {
+        var foundTypes = assembly.GetTypes()
+            .Select(t => new
+            {
+                Type = t,
+                Function = t.GetCustomAttribute<GearQueueJobAttribute>()?.FunctionName
+            })
+            .Where(t => t.Function is not null);
+
+        foreach (var typeInfo in foundTypes)
+        {
+            var serviceType = typeof(IGearQueueProducer<>).MakeGenericType(typeInfo.Type);
+        
+            var implementationType = typeof(GearQueueProducer<>).MakeGenericType(typeInfo.Type);
+        
+            _services.TryAddSingleton(serviceType, s =>
+            {
+                var producerFactory = s.GetRequiredService<IGearQueueProducerFactory>();
+                
+                return Activator.CreateInstance(implementationType, typeInfo.Function, serializer, producerFactory.GetRequired(producerName))!;
+            });
         }
     }
 

@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.UnitTests", "Gear
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleUtils", "Samples\SampleUtils\SampleUtils.csproj", "{B6898007-7D3D-45CF-B837-6BE02584EF1E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.Json", "GearQueue.Json\GearQueue.Json.csproj", "{5409C5DC-F703-4CBE-843B-0A3E7A76AEA1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,10 @@ Global
 		{B6898007-7D3D-45CF-B837-6BE02584EF1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B6898007-7D3D-45CF-B837-6BE02584EF1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B6898007-7D3D-45CF-B837-6BE02584EF1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5409C5DC-F703-4CBE-843B-0A3E7A76AEA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5409C5DC-F703-4CBE-843B-0A3E7A76AEA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5409C5DC-F703-4CBE-843B-0A3E7A76AEA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5409C5DC-F703-4CBE-843B-0A3E7A76AEA1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1B3435AF-79C5-4FBB-AD17-155F73E1D0E3} = {25FFDCCC-D779-4960-B5DF-556FC920FE82}

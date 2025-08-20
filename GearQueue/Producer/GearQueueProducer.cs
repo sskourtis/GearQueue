@@ -4,6 +4,7 @@ using GearQueue.Network;
 using GearQueue.Options;
 using GearQueue.Protocol;
 using GearQueue.Protocol.Request;
+using GearQueue.Serialization;
 using Microsoft.Extensions.Logging;
 using TimeProvider = GearQueue.Utils.TimeProvider;
 
@@ -24,6 +25,15 @@ public interface IGearQueueProducer
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns></returns>
     Task<bool> Produce(string functionName, byte[] data, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Create a new gearman job for the given function with the given job data.
+    /// </summary>
+    /// <param name="functionName">Gearman function name</param>
+    /// <param name="job">Job</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns></returns>
+    Task<bool> Produce<T>(string functionName, T job, CancellationToken cancellationToken = default);
 }
 
 public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueueProducer
@@ -32,6 +42,7 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
     private readonly ILogger _logger;
     private readonly GearQueueProducerOptions _options;
     private readonly IConnectionPool[] _connectionPools;
+    private readonly IGearQueueSerializer? _serializer;
     
     private int _distributionStrategyCounter = 0;
 
@@ -48,7 +59,17 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
             .ToArray<IConnectionPool>();
     }
     
-    internal GearQueueProducer(GearQueueProducerOptions options, ILoggerFactory loggerFactory, IConnectionPoolFactory connectionPoolFactory)
+    public GearQueueProducer(GearQueueProducerOptions options, IGearQueueSerializer serializer, ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateLogger<GearQueueProducer>();
+        _options = options;
+        _serializer = serializer;
+        _connectionPools = options.ConnectionPools
+            .Select(x => new ConnectionPool(x, loggerFactory, new ConnectionFactory(), new TimeProvider()))
+            .ToArray<IConnectionPool>();
+    }
+    
+    internal GearQueueProducer(GearQueueProducerOptions options, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<GearQueueProducer>();
         _options = options;
@@ -56,9 +77,19 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
             .Select(connectionPoolFactory.Create)
             .ToArray();
     }
+
+    internal GearQueueProducer(GearQueueProducerOptions options, IGearQueueSerializer serializer, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateLogger<GearQueueProducer>();
+        _options = options;
+        _serializer = serializer;
+        _connectionPools = options.ConnectionPools
+            .Select(connectionPoolFactory.Create)
+            .ToArray();
+    }
     
     /// <summary>
-    /// 
+    /// Create a new gearman job for the given function with the given job data.
     /// </summary>
     /// <param name="functionName">Gearman function name</param>
     /// <param name="data">Job data</param>
@@ -72,6 +103,21 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
         }
         
         return await MultiServerProduce(functionName, data, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Create a new gearman job for the given function with the given job data.
+    /// </summary>
+    /// <param name="functionName"></param>
+    /// <param name="job"></param>
+    /// <param name="cancellationToken"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public async Task<bool> Produce<T>(string functionName, T job, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(_serializer);
+
+        return await Produce(functionName, _serializer.Serialize(job), cancellationToken);
     }
     
     private async Task<bool> MultiServerProduce(string functionName, byte[] data, CancellationToken cancellationToken = default)

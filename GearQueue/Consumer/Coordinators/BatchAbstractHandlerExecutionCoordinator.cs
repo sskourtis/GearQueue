@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using GearQueue.Consumer.Provider;
 using GearQueue.Options;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
@@ -8,12 +9,12 @@ namespace GearQueue.Consumer.Coordinators;
 
 internal class BatchAbstractHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
-    IGearQueueHandlerExecutor handlerExecutor,
+    IGearQueueHandlerProviderFactory handlerProviderFactory,
     GearQueueConsumerOptions options,
     Dictionary<string, Type> handlers) 
     : AbstractHandlerExecutionCoordinator( 
         loggerFactory,
-        handlerExecutor, 
+        handlerProviderFactory, 
         handlers,
         new Dictionary<int, Func<string, JobResult, Task>>(), 
         new ConcurrentDictionary<Guid, Task>())

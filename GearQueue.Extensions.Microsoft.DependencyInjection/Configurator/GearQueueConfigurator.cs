@@ -1,6 +1,6 @@
 using System.Reflection;
 using GearQueue.Consumer;
-using GearQueue.Extensions.Microsoft.DependencyInjection.HandlerExecutors;
+using GearQueue.Extensions.Microsoft.DependencyInjection.Providers;
 using GearQueue.Options;
 using GearQueue.Options.Parser;
 using GearQueue.Options.Validation;
@@ -37,6 +37,8 @@ public class GearQueueConfigurator
 
         if (_consumerRegistrations.Count > 0)
         {
+            _services.TryAddSingleton<GearQueueMicrosoftProvider>();
+            _services.TryAddTransient<GearQueueMicrosoftScopedProvider>();
             _services.AddHostedService<GearQueueHostedService>();
         }
     }
@@ -300,10 +302,6 @@ public class GearQueueConfigurator
             {
                 throw new ArgumentException("There must be at least one handler mapping");
             }
-            
-            IGearQueueHandlerExecutor handlerExecutor = options.CreateScope
-                ? new GearQueueMicrosoftScopedHandlerExecutor(s.GetRequiredService<IServiceScopeFactory>())
-                : new GearQueueMicrosoftHandlerExecutor(s.GetRequiredService<IServiceProvider>());
 
             if (options.Batch is not null && registration.HandlerMapping.Count != 1)
             {
@@ -312,7 +310,7 @@ public class GearQueueConfigurator
 
             return new GearQueueConsumer(
                 options,
-                handlerExecutor,
+                new GearQueueMicrosoftProviderFactory(options.CreateScope, s.GetRequiredService<IServiceProvider>()),
                 registration.HandlerMapping.ToDictionary(x => x.Key, x => x.Value.Item1),
                 s.GetRequiredService<ILoggerFactory>());
         });

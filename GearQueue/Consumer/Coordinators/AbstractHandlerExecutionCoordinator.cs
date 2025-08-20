@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using GearQueue.Consumer.Provider;
 using GearQueue.Logging;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
@@ -7,7 +8,7 @@ namespace GearQueue.Consumer.Coordinators;
 
 internal abstract class AbstractHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
-    IGearQueueHandlerExecutor handlerExecutor,
+    IGearQueueHandlerProviderFactory handlerProviderFactory,
     Dictionary<string, Type> handlers,
     Dictionary<int, Func<string, JobResult, Task>>? jobResultCallback,
     ConcurrentDictionary<Guid, Task>? activeJobs)
@@ -59,15 +60,18 @@ internal abstract class AbstractHandlerExecutionCoordinator(
                
                 return JobResult.PermanentFailure;
             }
-            
-            var (success, jobStatus) = await handlerExecutor.TryExecute(handlerType, context).ConfigureAwait(false);
 
-            if (!success)
+            using var provider = handlerProviderFactory.Create();
+
+            var handler = provider.Get(handlerType);
+            
+            if (handler is null)
             {
                 _logger.LogHandlerTypeCreationFailure(handlerType, function);
+                return JobResult.PermanentFailure;
             }
 
-            return jobStatus ?? JobResult.PermanentFailure;
+            return await handler.Consume(context);
         }
         catch (Exception e)
         {

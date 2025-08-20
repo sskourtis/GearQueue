@@ -1,13 +1,13 @@
-using GearQueue.Logging;
+using GearQueue.Consumer.Provider;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Coordinators;
 
 internal class SynchronousAbstractHandlerExecutionCoordinator(
-    IGearQueueHandlerExecutor handlerExecutor,
+    IGearQueueHandlerProviderFactory handlerProviderFactory,
     Dictionary<string, Type> handlers,
-    ILoggerFactory loggerFactory) : AbstractHandlerExecutionCoordinator(loggerFactory, handlerExecutor, handlers, null, null)
+    ILoggerFactory loggerFactory) : AbstractHandlerExecutionCoordinator(loggerFactory, handlerProviderFactory, handlers, null, null)
 {
     internal override async Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken)
     {

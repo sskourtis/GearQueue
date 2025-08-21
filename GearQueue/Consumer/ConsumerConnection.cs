@@ -44,8 +44,8 @@ internal class ConsumerConnection(
                 var job = outOfOrderResponsePacket?.Type switch
                 {
                     PacketType.JobAssign => JobAssign.Create(outOfOrderResponsePacket.Value.Data),
-                    PacketType.JobAssignUniq => JobAssignUniq.Create(outOfOrderResponsePacket.Value.Data),
-                    PacketType.JobAssignAll => JobAssignAll.Create(outOfOrderResponsePacket.Value.Data),
+                    PacketType.JobAssignUniq => JobAssign.CreateUniq(outOfOrderResponsePacket.Value.Data),
+                    PacketType.JobAssignAll => JobAssign.CreateAll(outOfOrderResponsePacket.Value.Data),
                     _ => await CheckForJob(cancellationToken).ConfigureAwait(false),
                 };
 
@@ -176,9 +176,9 @@ internal class ConsumerConnection(
             case PacketType.JobAssign:
                 return JobAssign.Create(response.Value.Data);
             case PacketType.JobAssignUniq:
-                return JobAssignUniq.Create(response.Value.Data);
+                return JobAssign.CreateUniq(response.Value.Data);
             case PacketType.JobAssignAll:
-                return JobAssignAll.Create(response.Value.Data);
+                return JobAssign.CreateAll(response.Value.Data);
             default:
                 return null;
         }

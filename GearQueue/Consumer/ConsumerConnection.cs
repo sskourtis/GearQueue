@@ -17,7 +17,6 @@ internal class ConsumerConnection(
     ILoggerFactory loggerFactory) : IDisposable
 {
     private readonly ILogger<IGearQueueConsumer> _logger = loggerFactory.CreateLogger<IGearQueueConsumer>();
-
     private readonly Connection _connection = new(loggerFactory, options.Host);
     
     internal void RegisterResultCallback()
@@ -157,12 +156,10 @@ internal class ConsumerConnection(
             }
         }
     }
-    
-    private static readonly RequestPacket GrabJobPacket = RequestFactory.GrabJob();
 
     private async Task<JobAssign?> CheckForJob(CancellationToken cancellationToken = default)
     {
-        await _connection.SendPacket(GrabJobPacket, cancellationToken).ConfigureAwait(false);
+        await _connection.SendPacket(abstractHandlerExecutionCoordinator.GrabJobPacket, cancellationToken).ConfigureAwait(false);
 			
         var response = await _connection.GetPacket(cancellationToken).ConfigureAwait(false);
 

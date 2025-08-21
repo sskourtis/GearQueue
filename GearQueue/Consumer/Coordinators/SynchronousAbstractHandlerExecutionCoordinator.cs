@@ -1,10 +1,12 @@
 using GearQueue.Consumer.Pipeline;
 using GearQueue.Protocol.Response;
+using GearQueue.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Coordinators;
 
 internal class SynchronousAbstractHandlerExecutionCoordinator(
+    IGearQueueSerializer? serializer,
     ConsumerPipeline consumerPipeline,
     Dictionary<string, Type> handlers,
     ILoggerFactory loggerFactory) : AbstractHandlerExecutionCoordinator(loggerFactory, consumerPipeline, handlers, null, null)
@@ -16,7 +18,7 @@ internal class SynchronousAbstractHandlerExecutionCoordinator(
             return new ExecutionResult();
         }
         
-        var jobContext = new JobContext(job, cancellationToken);
+        var jobContext = new JobContext(serializer, job, cancellationToken);
 
         return await InvokeHandler(jobContext);
     }

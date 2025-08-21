@@ -1,13 +1,16 @@
 using System.Collections.Concurrent;
 using GearQueue.Consumer.Pipeline;
 using GearQueue.Options;
+using GearQueue.Protocol.Request;
 using GearQueue.Protocol.Response;
+using GearQueue.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ObjectPool;
 
 namespace GearQueue.Consumer.Coordinators;
 
 internal class BatchAbstractHandlerExecutionCoordinator(
+    IGearQueueSerializer? serializer,
     ILoggerFactory loggerFactory,
     ConsumerPipeline consumerPipeline,
     GearQueueConsumerOptions options,
@@ -22,7 +25,12 @@ internal class BatchAbstractHandlerExecutionCoordinator(
     private readonly ObjectPool<BatchData> _batchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
     private readonly List<BatchData> _pendingBatches = [];
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);
-
+    
+    // If batching by key is enabled, we need to grab the unique id of each job in order to decode the key.
+    internal override RequestPacket GrabJobPacket => options.Batch!.ByKey
+        ? RequestFactory.GrabJobUniq()
+        : RequestFactory.GrabJob();
+    
     internal override async Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken)
     {
         var (nextTimeout, completedBatches) = GetCompletedBatches(connectionId, job);
@@ -57,7 +65,9 @@ internal class BatchAbstractHandlerExecutionCoordinator(
             {
                 var batch = _pendingBatches[i];
                 
-                if (job is not null && batch.Function == job.FunctionName)
+                if (job is not null && 
+                    batch.Function == job.FunctionName && 
+                    (!options.Batch!.ByKey || batch.Key == job.BatchKey))
                 {
                     batch.Jobs.Add((connectionId, job));
                     job = null;
@@ -91,7 +101,12 @@ internal class BatchAbstractHandlerExecutionCoordinator(
                 batch.Jobs.Add((connectionId, job));
                 
                 batch.Created = DateTimeOffset.UtcNow;
-                batch.Key = null;
+
+                if (options.Batch!.ByKey)
+                {
+                    batch.Key = job.BatchKey;   
+                }
+                
                 batch.Function = job.FunctionName;
                 
                 minimumNextTimeout ??= options.Batch!.TimeLimit;
@@ -119,7 +134,7 @@ internal class BatchAbstractHandlerExecutionCoordinator(
     {
         try
         {
-            var jobContext = new JobContext(batchData.Function, batchData.Jobs.Select(j => j.Job), cancellationToken);
+            var jobContext = new JobContext(serializer, batchData.Function, batchData.Jobs.Select(j => j.Job), batchData.Key, cancellationToken);
             
             var result = await InvokeHandler(jobContext);
             

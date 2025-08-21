@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using GearQueue.Consumer.Pipeline;
 using GearQueue.Logging;
+using GearQueue.Protocol.Request;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
 
@@ -27,7 +28,8 @@ internal abstract class AbstractHandlerExecutionCoordinator(
     /// <param name="cancellationToken"></param>
     /// <returns>Returns the job status when it is executed synchronously, otherwise it returns null</returns>
     internal abstract Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken);
-
+    
+    internal virtual RequestPacket GrabJobPacket => RequestFactory.GrabJob();
     
     /// <summary>
     /// Register a result callback for async job execution

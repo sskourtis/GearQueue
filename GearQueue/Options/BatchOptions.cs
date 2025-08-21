@@ -11,4 +11,6 @@ public class BatchOptions
     /// 
     /// </summary>
     public TimeSpan TimeLimit { get; set; }
+    
+    public bool ByKey { get; set; } = false;
 }

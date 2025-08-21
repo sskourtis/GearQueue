@@ -2,6 +2,7 @@ using GearQueue.Consumer.Coordinators;
 using GearQueue.Consumer.Pipeline;
 using GearQueue.Logging;
 using GearQueue.Options;
+using GearQueue.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer;
@@ -10,6 +11,7 @@ public class GearQueueConsumer(
     GearQueueConsumerOptions options,
     ConsumerPipeline consumerPipeline,
     Dictionary<string, Type> handlers,
+    IGearQueueSerializer? serializer,
     ILoggerFactory loggerFactory) : IGearQueueConsumer
 {
     /// <summary>
@@ -39,12 +41,12 @@ public class GearQueueConsumer(
             }
             
             coordinators.Add(
-                new BatchAbstractHandlerExecutionCoordinator(loggerFactory, consumerPipeline, options, handlers));
+                new BatchAbstractHandlerExecutionCoordinator(serializer, loggerFactory, consumerPipeline, options, handlers));
         }
         else if (options.ConcurrencyStrategy == ConcurrencyStrategy.AcrossServers)
         {
             coordinators.Add(
-                new AsynchronousAbstractHandlerExecutionCoordinator(consumerPipeline, handlers, options, loggerFactory));
+                new AsynchronousAbstractHandlerExecutionCoordinator(serializer, consumerPipeline, handlers, options, loggerFactory));
         }
 
         var instances = options.Hosts
@@ -65,7 +67,7 @@ public class GearQueueConsumer(
                         break;
                     case ConcurrencyStrategy.PerServer:
                         // PerServer, all the connections to this server share the same coordinator
-                        sharedCoordinator = new AsynchronousAbstractHandlerExecutionCoordinator(consumerPipeline, handlers, options, loggerFactory);
+                        sharedCoordinator = new AsynchronousAbstractHandlerExecutionCoordinator(serializer, consumerPipeline, handlers, options, loggerFactory);
                         coordinators.Add(sharedCoordinator);
                         break;
                     case ConcurrencyStrategy.PerConnection:
@@ -83,10 +85,10 @@ public class GearQueueConsumer(
                         switch (coordinator)
                         {
                             case null when options.MaxConcurrency == 1:
-                                coordinator = new SynchronousAbstractHandlerExecutionCoordinator(consumerPipeline, handlers, loggerFactory);
+                                coordinator = new SynchronousAbstractHandlerExecutionCoordinator(serializer, consumerPipeline, handlers, loggerFactory);
                                 break;
                             case null:
-                                coordinator = new AsynchronousAbstractHandlerExecutionCoordinator(consumerPipeline, handlers, options, loggerFactory);
+                                coordinator = new AsynchronousAbstractHandlerExecutionCoordinator(serializer, consumerPipeline, handlers, options, loggerFactory);
                                 coordinators.Add(coordinator);
                                 break;
                         }

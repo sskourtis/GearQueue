@@ -1,9 +1,11 @@
 using GearQueue.Protocol.Response;
+using GearQueue.Serialization;
 
 namespace GearQueue.Consumer;
 
 public class JobContext
 {
+    private readonly IGearQueueSerializer? _serializer;
     private readonly IEnumerable<JobContext>? _batchContexts;
     private readonly JobAssign? _jobAssign;
 
@@ -23,23 +25,43 @@ public class JobContext
     
     public Type? HandlerType { get; internal set; }
     
+    public string? BatchKey { get; init; }
+    
+    public bool IsBatch => _batchContexts != null;
+    
 
-    internal JobContext(JobAssign jobAssign, CancellationToken cancellationToken)
+    internal JobContext(IGearQueueSerializer? serializer, JobAssign jobAssign, CancellationToken cancellationToken)
     {
+        _serializer = serializer;
         CancellationToken = cancellationToken;
         _jobAssign = jobAssign;
         FunctionName = jobAssign.FunctionName;
     }
     
-    internal JobContext(string functionName, IEnumerable<JobAssign> jobs, CancellationToken cancellationToken)
+    internal JobContext(IGearQueueSerializer? serializer, string functionName, IEnumerable<JobAssign> jobs, string? batchKey, CancellationToken cancellationToken)
     {
+        _serializer = serializer;
         CancellationToken = cancellationToken;
-        _batchContexts = jobs.Select(x => new JobContext(x, cancellationToken));
+        _batchContexts = jobs.Select(x => new JobContext(serializer, x, cancellationToken));
         FunctionName = functionName;
+        BatchKey = batchKey;
     }
 
     public void SetResult(JobResult result)
     {
         Result = result;
+    }
+
+    public T To<T>()
+    {
+        return _serializer!.Deserialize<T>(Data);
+    }
+
+    public IEnumerable<T> ToBatch<T>()
+    {
+        foreach (var job in Batches)
+        {
+            yield return job.To<T>();
+        }
     }
 }

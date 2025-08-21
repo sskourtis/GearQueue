@@ -25,6 +25,17 @@ public interface IGearQueueProducer
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns></returns>
     Task<bool> Produce(string functionName, byte[] data, CancellationToken cancellationToken = default);
+
+
+    /// <summary>
+    /// Create a new gearman job for the given function with the given job data.
+    /// </summary>
+    /// <param name="functionName">Gearman function name</param>
+    /// <param name="data">Job data</param>
+    /// <param name="options">Extra submission options</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns></returns>
+    Task<bool> Produce(string functionName, byte[] data, ProducerOptions options, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// Create a new gearman job for the given function with the given job data.
@@ -34,17 +45,29 @@ public interface IGearQueueProducer
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns></returns>
     Task<bool> Produce<T>(string functionName, T job, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Create a new gearman job for the given function with the given job data.
+    /// </summary>
+    /// <param name="functionName">Gearman function name</param>
+    /// <param name="job">Job</param>
+    /// <param name="options">Extra submission options</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns></returns>
+    Task<bool> Produce<T>(string functionName, T job, ProducerOptions options, CancellationToken cancellationToken = default);
 }
 
-public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueueProducer
+public class GearQueueProducer : IDisposable, INamedGearQueueProducer
 {
-    private bool _disposed = false;
+    private static readonly ProducerOptions DefaultOptions = new();
+    
+    private bool _disposed;
     private readonly ILogger _logger;
     private readonly GearQueueProducerOptions _options;
     private readonly IConnectionPool[] _connectionPools;
     private readonly IGearQueueSerializer? _serializer;
     
-    private int _distributionStrategyCounter = 0;
+    private int _distributionStrategyCounter;
 
     public ConnectionPoolMetrics Metrics => _connectionPools.First().Metrics;
     
@@ -88,31 +111,26 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
             .ToArray();
     }
     
-    /// <summary>
-    /// Create a new gearman job for the given function with the given job data.
-    /// </summary>
-    /// <param name="functionName">Gearman function name</param>
-    /// <param name="data">Job data</param>
-    /// <param name="cancellationToken">Optional cancellation token</param>
-    /// <returns></returns>
     public async Task<bool> Produce(string functionName, byte[] data, CancellationToken cancellationToken = default)
     {
         if (_connectionPools.Length == 1)
         {
-            return await Produce(0, functionName, data, cancellationToken).ConfigureAwait(false);
+            return await Produce(0, functionName, data, DefaultOptions, cancellationToken).ConfigureAwait(false);
         }
         
-        return await MultiServerProduce(functionName, data, cancellationToken).ConfigureAwait(false);
+        return await MultiServerProduce(functionName, data, DefaultOptions, cancellationToken).ConfigureAwait(false);
+    }
+    
+    public async Task<bool> Produce(string functionName, byte[] data, ProducerOptions options, CancellationToken cancellationToken = default)
+    {
+        if (_connectionPools.Length == 1)
+        {
+            return await Produce(0, functionName, data, options, cancellationToken).ConfigureAwait(false);
+        }
+        
+        return await MultiServerProduce(functionName, data, options, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Create a new gearman job for the given function with the given job data.
-    /// </summary>
-    /// <param name="functionName"></param>
-    /// <param name="job"></param>
-    /// <param name="cancellationToken"></param>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
     public async Task<bool> Produce<T>(string functionName, T job, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(_serializer);
@@ -120,7 +138,14 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
         return await Produce(functionName, _serializer.Serialize(job), cancellationToken);
     }
     
-    private async Task<bool> MultiServerProduce(string functionName, byte[] data, CancellationToken cancellationToken = default)
+    public async Task<bool> Produce<T>(string functionName, T job, ProducerOptions options, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(_serializer);
+
+        return await Produce(functionName, _serializer.Serialize(job), options, cancellationToken);
+    }
+    
+    private async Task<bool> MultiServerProduce(string functionName, byte[] data, ProducerOptions options, CancellationToken cancellationToken = default)
     {
         var serverIndex = SelectServerIndex();
 
@@ -141,7 +166,7 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
                 continue;
             }
 
-            if (await Produce(adjustedIndex, functionName, data, cancellationToken).ConfigureAwait(false))
+            if (await Produce(adjustedIndex, functionName, data, options, cancellationToken).ConfigureAwait(false))
             {
                 if (_options.DistributionStrategy == DistributionStrategy.PrimaryWithFailover)
                 {
@@ -179,14 +204,28 @@ public class GearQueueProducer : IDisposable, IGearQueueProducer, INamedGearQueu
     private async Task<bool> Produce(int serverIndex, 
         string functionName, 
         byte[] data,
+        ProducerOptions options,
         CancellationToken cancellationToken = default)
     {
         IConnection? connection = null;
         try
         {
             connection = await _connectionPools[serverIndex].Get(cancellationToken).ConfigureAwait(false);
+
             
-            await connection.SendPacket(RequestFactory.SubmitJob(functionName, Guid.NewGuid().ToString(), data),
+            RequestPacket requestPacket;
+            
+            if (options.CorrelationId is not null || options.GroupKey is not null)
+            {
+                requestPacket = RequestFactory.SubmitJob(functionName,
+                    UniqueId.Create(options.CorrelationId ?? Guid.NewGuid().ToString("N"), options.GroupKey), data, options.Priority);
+            }
+            else
+            {
+                requestPacket = RequestFactory.SubmitJob(functionName, Guid.NewGuid().ToString("N"), data, options.Priority);
+            }
+            
+            await connection.SendPacket(requestPacket,
                 cancellationToken)
                 .ConfigureAwait(false);
 

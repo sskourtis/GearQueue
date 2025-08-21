@@ -7,11 +7,11 @@ public class ExampleBatchHandler(ILogger<ExampleBatchHandler> logger) : IGearQue
 {
     private static readonly InvocationsTracker InvocationsTracker = new();
     
-    public Task<JobResult> Consume(JobContext job)
+    public Task<JobResult> Consume(JobContext context)
     {
-        logger.LogInformation("Consuming batch job {Job}", job.Batches.Count());
+        logger.LogInformation("Consuming batch job {Job}", context.Batches.Count());
 
-        var (total, perSecond) = InvocationsTracker.InvokeAndGetInvocations(job.Batches.Count());
+        var (total, perSecond) = InvocationsTracker.InvokeAndGetInvocations(context.Batches.Count());
 
         if (perSecond.HasValue)
         {

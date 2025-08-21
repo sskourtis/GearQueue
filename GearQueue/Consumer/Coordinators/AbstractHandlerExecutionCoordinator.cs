@@ -11,12 +11,12 @@ internal abstract class AbstractHandlerExecutionCoordinator(
     IGearQueueHandlerProviderFactory handlerProviderFactory,
     Dictionary<string, Type> handlers,
     Dictionary<int, Func<string, JobResult, Task>>? jobResultCallback,
-    ConcurrentDictionary<Guid, Task>? activeJobs)
+    ConcurrentDictionary<Guid, TaskCompletionSource<bool>>? activeJobs)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<GearQueueConsumer>();
     
     protected readonly Dictionary<int, Func<string, JobResult, Task>>? JobResultCallback = jobResultCallback;
-    protected readonly ConcurrentDictionary<Guid, Task>? ActiveJobs = activeJobs;
+    protected readonly ConcurrentDictionary<Guid, TaskCompletionSource<bool>>? ActiveJobs = activeJobs;
     
     /// <summary>
     /// Accepts a job and arranges the execution of the job. Depending on the implementation, the job may be
@@ -46,7 +46,7 @@ internal abstract class AbstractHandlerExecutionCoordinator(
     {
         if (ActiveJobs is not null)
         {
-            await Task.WhenAll(ActiveJobs.Values);
+            await Task.WhenAll(ActiveJobs.Values.Select(t => t.Task)).ConfigureAwait(false);;
         }
     }
 

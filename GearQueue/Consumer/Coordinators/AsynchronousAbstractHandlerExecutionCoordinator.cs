@@ -16,7 +16,7 @@ internal class AsynchronousAbstractHandlerExecutionCoordinator(
         handlerProviderFactory, 
         handlers,
         new Dictionary<int, Func<string, JobResult, Task>>(), 
-        new ConcurrentDictionary<Guid, Task>())
+        new ConcurrentDictionary<Guid, TaskCompletionSource<bool>>()), IDisposable
 {
     private readonly ILogger<AsynchronousAbstractHandlerExecutionCoordinator> _logger = loggerFactory.CreateLogger<AsynchronousAbstractHandlerExecutionCoordinator>();
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);
@@ -32,10 +32,12 @@ internal class AsynchronousAbstractHandlerExecutionCoordinator(
         
         var batchId = Guid.NewGuid();
 
-        var task = CallHandler(batchId, connectionId, job, cancellationToken);
+        var taskCompletionSource = new TaskCompletionSource<bool>();
         
-        ActiveJobs!.TryAdd(batchId, task);
-
+        ActiveJobs!.TryAdd(batchId, taskCompletionSource);
+        
+        _ = CallHandler(batchId, connectionId, job, taskCompletionSource, cancellationToken);
+        
         return new ExecutionResult();
     }
     
@@ -43,6 +45,7 @@ internal class AsynchronousAbstractHandlerExecutionCoordinator(
         Guid executionId,
         int connectionId,
         JobAssign job, 
+        TaskCompletionSource<bool> taskCompletionSource,
         CancellationToken cancellationToken)
     {
         try
@@ -59,9 +62,14 @@ internal class AsynchronousAbstractHandlerExecutionCoordinator(
         }
         finally
         {
+            taskCompletionSource.SetResult(true);
             ActiveJobs!.Remove(executionId, out _);
             _handlerSemaphore.Release();
         }
     }
-    
+
+    public void Dispose()
+    {
+        _handlerSemaphore.Dispose();
+    }
 }

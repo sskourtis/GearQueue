@@ -17,7 +17,7 @@ internal class BatchAbstractHandlerExecutionCoordinator(
         handlerProviderFactory, 
         handlers,
         new Dictionary<int, Func<string, JobResult, Task>>(), 
-        new ConcurrentDictionary<Guid, Task>())
+        new ConcurrentDictionary<Guid, TaskCompletionSource<bool>>())
 {
     private readonly ObjectPool<BatchData> _batchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
     private readonly List<BatchData> _pendingBatches = [];
@@ -35,8 +35,11 @@ internal class BatchAbstractHandlerExecutionCoordinator(
         
                 var batchId = Guid.NewGuid();
 
-                var task = CallHandler(batchId, batch, cancellationToken);
-                ActiveJobs!.TryAdd(batchId, task);
+                var taskCompletionSource = new TaskCompletionSource<bool>();
+                
+                ActiveJobs!.TryAdd(batchId, taskCompletionSource);
+                
+                _ = CallHandler(batchId, batch, taskCompletionSource, cancellationToken);
             }
         }
 
@@ -111,6 +114,7 @@ internal class BatchAbstractHandlerExecutionCoordinator(
     private async Task CallHandler(
         Guid batchProcessingId,
         BatchData batchData, 
+        TaskCompletionSource<bool> taskCompletionSource,
         CancellationToken cancellationToken)
     {
         try
@@ -130,6 +134,7 @@ internal class BatchAbstractHandlerExecutionCoordinator(
         }
         finally
         {
+            taskCompletionSource.SetResult(true);
             _batchDataPool.Return(batchData);
             _handlerSemaphore.Release();
             ActiveJobs!.Remove(batchProcessingId, out _);

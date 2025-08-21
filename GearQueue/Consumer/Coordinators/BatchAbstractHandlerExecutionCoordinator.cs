@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using GearQueue.Consumer.Provider;
+using GearQueue.Consumer.Pipeline;
 using GearQueue.Options;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
@@ -9,12 +9,12 @@ namespace GearQueue.Consumer.Coordinators;
 
 internal class BatchAbstractHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
-    IGearQueueHandlerProviderFactory handlerProviderFactory,
+    ConsumerPipeline consumerPipeline,
     GearQueueConsumerOptions options,
     Dictionary<string, Type> handlers) 
     : AbstractHandlerExecutionCoordinator( 
         loggerFactory,
-        handlerProviderFactory, 
+        consumerPipeline, 
         handlers,
         new Dictionary<int, Func<string, JobResult, Task>>(), 
         new ConcurrentDictionary<Guid, TaskCompletionSource<bool>>())
@@ -119,9 +119,9 @@ internal class BatchAbstractHandlerExecutionCoordinator(
     {
         try
         {
-            var jobContext = new JobContext(batchData.Jobs.Select(j => j.Job), cancellationToken);
+            var jobContext = new JobContext(batchData.Function, batchData.Jobs.Select(j => j.Job), cancellationToken);
             
-            var result = await InvokeHandler(batchData.Function, jobContext, cancellationToken);
+            var result = await InvokeHandler(jobContext);
             
             foreach (var job in batchData.Jobs)
             {

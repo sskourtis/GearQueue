@@ -6,7 +6,11 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddGearQueue(g =>
 {
     g.AddConsumer(builder.Configuration.GetConnectionString("Consumer"))
-        .SetHandler<ExampleHandler>("test-function");
+        .SetHandler<ExampleHandler>("test-function", ServiceLifetime.Singleton)
+        .SetPipeline(b =>
+        {
+            b.Use<ThroughputTrackingMiddleware>();
+        });
 
     g.AddConsumer(builder.Configuration.GetConnectionString("BatchConsumer"))
         .SetHandler<ExampleBatchHandler>("test-batch-function");

@@ -18,4 +18,9 @@ public class GearQueueConsumerConfigurator
         _consumerRegistration.HandlerMapping[functionName] = (typeof(T), lifetime);
         return this;
     }
+
+    public void SetPipeline(Action<ConsumerPipelineBuilder> builder)
+    {
+        builder(_consumerRegistration.PipelineBuilder);
+    }
 }

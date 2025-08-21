@@ -225,6 +225,7 @@ public class GearQueueConfigurator
         var registration = new ConsumerRegistration
         {
             ConfigureOptions = configure,
+            PipelineBuilder = new ConsumerPipelineBuilder(_services)
         };
         
         _consumerRegistrations.Add(registration);
@@ -238,6 +239,7 @@ public class GearQueueConfigurator
         {
             ConfigureOptions = configure,
             Section = section,
+            PipelineBuilder = new ConsumerPipelineBuilder(_services)
         };
         
         _consumerRegistrations.Add(registration);
@@ -251,6 +253,7 @@ public class GearQueueConfigurator
         {
             ConfigureOptions = configure,
             ConnectionString = connectionString,
+            PipelineBuilder = new ConsumerPipelineBuilder(_services)
         };
         
         _consumerRegistrations.Add(registration);
@@ -308,9 +311,10 @@ public class GearQueueConfigurator
                 throw new ArgumentException("Batch consumer must have exactly one handler");
             }
 
+           
             return new GearQueueConsumer(
                 options,
-                new GearQueueMicrosoftProviderFactory(options.CreateScope, s.GetRequiredService<IServiceProvider>()),
+                registration.PipelineBuilder.Build(options.CreateScope, s),
                 registration.HandlerMapping.ToDictionary(x => x.Key, x => x.Value.Item1),
                 s.GetRequiredService<ILoggerFactory>());
         });

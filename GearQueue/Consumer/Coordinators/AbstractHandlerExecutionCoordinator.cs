@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using GearQueue.Consumer.Provider;
+using GearQueue.Consumer.Pipeline;
 using GearQueue.Logging;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
@@ -8,7 +8,7 @@ namespace GearQueue.Consumer.Coordinators;
 
 internal abstract class AbstractHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
-    IGearQueueHandlerProviderFactory handlerProviderFactory,
+    ConsumerPipeline consumerPipeline,
     Dictionary<string, Type> handlers,
     Dictionary<int, Func<string, JobResult, Task>>? jobResultCallback,
     ConcurrentDictionary<Guid, TaskCompletionSource<bool>>? activeJobs)
@@ -50,28 +50,22 @@ internal abstract class AbstractHandlerExecutionCoordinator(
         }
     }
 
-    protected async Task<JobResult> InvokeHandler(string function, JobContext context, CancellationToken cancellationToken)
+    protected async Task<JobResult> InvokeHandler(JobContext context)
     {
         try
         {
-            if (!handlers.TryGetValue(function, out var handlerType))
+            if (!handlers.TryGetValue(context.FunctionName, out var handlerType))
             {
-                _logger.LogMissingHandlerType(function);
+                _logger.LogMissingHandlerType(context.FunctionName);
                
                 return JobResult.PermanentFailure;
             }
-
-            using var provider = handlerProviderFactory.Create();
-
-            var handler = provider.Get(handlerType);
             
-            if (handler is null)
-            {
-                _logger.LogHandlerTypeCreationFailure(handlerType, function);
-                return JobResult.PermanentFailure;
-            }
+            context.HandlerType = handlerType;
 
-            return await handler.Consume(context);
+            await consumerPipeline.InvokeAsync(context);
+
+            return context.Result ?? JobResult.PermanentFailure;
         }
         catch (Exception e)
         {

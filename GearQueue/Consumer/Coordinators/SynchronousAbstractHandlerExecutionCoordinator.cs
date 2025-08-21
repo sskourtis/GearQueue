@@ -1,13 +1,13 @@
-using GearQueue.Consumer.Provider;
+using GearQueue.Consumer.Pipeline;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Coordinators;
 
 internal class SynchronousAbstractHandlerExecutionCoordinator(
-    IGearQueueHandlerProviderFactory handlerProviderFactory,
+    ConsumerPipeline consumerPipeline,
     Dictionary<string, Type> handlers,
-    ILoggerFactory loggerFactory) : AbstractHandlerExecutionCoordinator(loggerFactory, handlerProviderFactory, handlers, null, null)
+    ILoggerFactory loggerFactory) : AbstractHandlerExecutionCoordinator(loggerFactory, consumerPipeline, handlers, null, null)
 {
     internal override async Task<ExecutionResult> ArrangeExecution(int connectionId, JobAssign? job, CancellationToken cancellationToken)
     {
@@ -18,6 +18,6 @@ internal class SynchronousAbstractHandlerExecutionCoordinator(
         
         var jobContext = new JobContext(job, cancellationToken);
 
-        return await InvokeHandler(job.FunctionName, jobContext, cancellationToken);
+        return await InvokeHandler(jobContext);
     }
 }

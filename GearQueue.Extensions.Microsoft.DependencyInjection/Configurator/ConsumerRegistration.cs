@@ -10,4 +10,5 @@ public class ConsumerRegistration
     public IConfigurationSection? Section { get; set; }
     public string? ConnectionString { get; set; }
     public Action<GearQueueConsumerOptions>? ConfigureOptions { get; set; }
+    public required ConsumerPipelineBuilder PipelineBuilder { get; init; }
 }

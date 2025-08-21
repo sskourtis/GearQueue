@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using GearQueue.Consumer.Provider;
+using GearQueue.Consumer.Pipeline;
 using GearQueue.Options;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
@@ -7,13 +7,13 @@ using Microsoft.Extensions.Logging;
 namespace GearQueue.Consumer.Coordinators;
 
 internal class AsynchronousAbstractHandlerExecutionCoordinator(
-    IGearQueueHandlerProviderFactory handlerProviderFactory,
+    ConsumerPipeline consumerPipeline,
     Dictionary<string, Type> handlers,
     GearQueueConsumerOptions options,
     ILoggerFactory loggerFactory) 
     : AbstractHandlerExecutionCoordinator(
         loggerFactory,
-        handlerProviderFactory, 
+        consumerPipeline, 
         handlers,
         new Dictionary<int, Func<string, JobResult, Task>>(), 
         new ConcurrentDictionary<Guid, TaskCompletionSource<bool>>()), IDisposable
@@ -52,7 +52,7 @@ internal class AsynchronousAbstractHandlerExecutionCoordinator(
         {
             var jobContext = new JobContext(job, cancellationToken);
             
-            var result = await InvokeHandler(job.FunctionName, jobContext, cancellationToken);
+            var result = await InvokeHandler(jobContext);
 
             if (JobResultCallback!.TryGetValue(connectionId, out var callback))
             {

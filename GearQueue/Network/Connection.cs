@@ -210,6 +210,9 @@ internal class Connection : IDisposable, IConnection
 
                 if (skipBody)
                 {
+                    // In reality, we can't skip reading the body, but we can read it into a rented buffer if 
+                    // we know we don't have to return it and lose track of it.
+                    
                     byte[]? bodyBuffer = null;
                     try
                     {

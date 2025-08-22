@@ -1,8 +1,8 @@
 using System.Reflection;
 using System.Text;
 using GearQueue.Extensions.Microsoft.DependencyInjection;
-using GearQueue.Json;
 using GearQueue.Producer;
+using GearQueue.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using SampleUtils;
 
@@ -14,7 +14,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddGearQueue(g =>
 {
-    g.SetDefaultSerializer(new GearQueueJobJsonSerializer());
+    g.SetDefaultSerializer(new GearQueueJsonJobSerializer());
     
     g.AddProducer(builder.Configuration.GetConnectionString("Producer")!);
     g.AddNamedProducer("primary", builder.Configuration.GetConnectionString("ProducerA")!);

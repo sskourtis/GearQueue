@@ -1,12 +1,15 @@
 ﻿using System.Text;
 using System.Text.Json;
-using GearQueue.Serialization;
+using System.Text.Json.Serialization;
 
-namespace GearQueue.Json;
+namespace GearQueue.Serialization;
 
-public class GearQueueJobJsonSerializer(JsonSerializerOptions options) : IGearQueueJobSerializer
+public class GearQueueJsonJobSerializer(JsonSerializerOptions options) : IGearQueueJobSerializer
 {
-    public GearQueueJobJsonSerializer() : this(new JsonSerializerOptions())
+    public GearQueueJsonJobSerializer() : this(new JsonSerializerOptions
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    })
     {
     }
 

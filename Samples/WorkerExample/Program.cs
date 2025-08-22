@@ -1,5 +1,5 @@
 using GearQueue.Extensions.Microsoft.DependencyInjection;
-using GearQueue.Json;
+using GearQueue.Serialization;
 using WorkerExample.Handlers;
 using WorkerExample.Middlewares;
 
@@ -7,7 +7,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddGearQueue(g =>
 {
-    g.SetDefaultSerializer(new GearQueueJobJsonSerializer());
+    g.SetDefaultSerializer(new GearQueueJsonJobSerializer());
     
     g.AddConsumer(builder.Configuration.GetConnectionString("Consumer"))
         .SetHandler<ExampleHandler>("test-function", ServiceLifetime.Singleton)

@@ -103,7 +103,7 @@ internal class ConsumerConnection(
             }
             catch (SocketException e)
             {
-                _logger.LogInformation(e, "Got Exception");
+                _logger.LogSocketError(options.Host.Hostname, options.Host.Port, e);;
                 // Reconnect to gearman server
                 await Connect(cancellationToken).ConfigureAwait(false);
             }

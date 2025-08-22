@@ -19,7 +19,7 @@ internal class BatchAbstractHandlerExecutionCoordinator(
         consumerPipeline, 
         handlers,
         new Dictionary<int, Func<string, JobResult, Task>>(), 
-        new ConcurrentDictionary<Guid, TaskCompletionSource<bool>>())
+        new ConcurrentDictionary<Guid, TaskCompletionSource<bool>>()), IDisposable
 {
     private readonly ILogger<IConsumer> _logger = loggerFactory.CreateLogger<IConsumer>();
     private readonly ObjectPool<BatchData> _batchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
@@ -193,5 +193,10 @@ internal class BatchAbstractHandlerExecutionCoordinator(
         public List<(int ConnectionId, JobAssign Job)> Jobs { get; set; } = [];
         
         public DateTimeOffset Created { get; set; }
+    }
+
+    public void Dispose()
+    {
+        _handlerSemaphore.Dispose();
     }
 }

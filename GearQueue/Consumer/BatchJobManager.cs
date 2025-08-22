@@ -25,8 +25,7 @@ public class BatchJobManager(string functionName, HandlerOptions options)
         var jobContexts = readyToRunBatches?.Select(
             b =>
             {
-                var context = new JobContext(b.Function,
-                    b.Jobs,
+                var context = new JobContext(b.Jobs,
                     b.Key,
                     options.Serializer,
                     CancellationToken.None)

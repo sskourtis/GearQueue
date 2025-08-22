@@ -25,7 +25,7 @@ public class JobContext
         ? throw new Exception("This is not a batch context")
         : _batchContexts;
     
-    public string FunctionName { get; init; }
+    public string FunctionName => _jobAssign?.FunctionName ?? _batchContexts?.First().FunctionName ?? throw new Exception("Job context has not been assigned");
     
     public Type? HandlerType { get; internal set; }
     
@@ -44,15 +44,13 @@ public class JobContext
         ConnectionId = connectionId;
         CancellationToken = cancellationToken;
         _jobAssign = jobAssign;
-        FunctionName = jobAssign.FunctionName;
     }
     
-    internal JobContext(string functionName, List<(int ConnectionId, JobAssign Job)> jobs, string? batchKey, IGearQueueJobSerializer? serializer, CancellationToken cancellationToken)
+    internal JobContext(List<(int ConnectionId, JobAssign Job)> jobs, string? batchKey, IGearQueueJobSerializer? serializer, CancellationToken cancellationToken)
     {
         _serializer = serializer;
         CancellationToken = cancellationToken;
         _batchContexts = jobs.Select(x => new JobContext(x.Job, serializer, x.ConnectionId, cancellationToken)).ToArray();
-        FunctionName = functionName;
         BatchKey = batchKey;
     }
 

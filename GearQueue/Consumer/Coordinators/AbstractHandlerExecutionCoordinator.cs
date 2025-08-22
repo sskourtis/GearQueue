@@ -10,7 +10,7 @@ namespace GearQueue.Consumer.Coordinators;
 internal abstract class AbstractHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
     ConsumerPipeline consumerPipeline,
-    Dictionary<string, Type> handlers,
+    Dictionary<string, HandlerOptions> handlers,
     Dictionary<int, Func<string, JobResult, Task>>? jobResultCallback,
     ConcurrentDictionary<Guid, TaskCompletionSource<bool>>? activeJobs)
 {
@@ -52,18 +52,20 @@ internal abstract class AbstractHandlerExecutionCoordinator(
         }
     }
 
-    protected async Task<JobResult> InvokeHandler(JobContext context)
+    protected async Task<JobResult> InvokeHandler(JobAssign job, CancellationToken cancellationToken)
     {
         try
         {
-            if (!handlers.TryGetValue(context.FunctionName, out var handlerType))
+            if (!handlers.TryGetValue(job.FunctionName, out var handlerOptions))
             {
-                _logger.LogMissingHandlerType(context.FunctionName);
+                _logger.LogMissingHandlerType(job.FunctionName);
                
                 return JobResult.PermanentFailure;
             }
             
-            context.HandlerType = handlerType;
+            var context = handlerOptions.JobContextFactory.Create(job, cancellationToken);
+            
+            context.HandlerType = handlerOptions.Type;
 
             await consumerPipeline.InvokeAsync(context);
 

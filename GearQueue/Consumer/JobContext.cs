@@ -5,7 +5,6 @@ namespace GearQueue.Consumer;
 
 public class JobContext
 {
-    private readonly IGearQueueSerializer? _serializer;
     private readonly IEnumerable<JobContext>? _batchContexts;
     private readonly JobAssign? _jobAssign;
 
@@ -17,7 +16,7 @@ public class JobContext
         ? throw new Exception("Job context has not been assigned, is this a batch context?") 
         : _jobAssign.Data;
 
-    public IEnumerable<JobContext> Batches => _batchContexts is null
+    public virtual IEnumerable<JobContext> Batches => _batchContexts is null
         ? throw new Exception("This is not a batch context")
         : _batchContexts;
     
@@ -28,21 +27,25 @@ public class JobContext
     public string? BatchKey { get; init; }
     
     public bool IsBatch => _batchContexts != null;
-    
 
-    internal JobContext(IGearQueueSerializer? serializer, JobAssign jobAssign, CancellationToken cancellationToken)
+
+    protected JobContext(string functionName, CancellationToken cancellationToken)
     {
-        _serializer = serializer;
+        FunctionName = functionName;
+        CancellationToken = cancellationToken;
+    }
+
+    internal JobContext(JobAssign jobAssign, CancellationToken cancellationToken)
+    {;
         CancellationToken = cancellationToken;
         _jobAssign = jobAssign;
         FunctionName = jobAssign.FunctionName;
     }
     
-    internal JobContext(IGearQueueSerializer? serializer, string functionName, IEnumerable<JobAssign> jobs, string? batchKey, CancellationToken cancellationToken)
+    internal JobContext(string functionName, IEnumerable<JobAssign> jobs, string? batchKey, CancellationToken cancellationToken)
     {
-        _serializer = serializer;
         CancellationToken = cancellationToken;
-        _batchContexts = jobs.Select(x => new JobContext(serializer, x, cancellationToken));
+        _batchContexts = jobs.Select(x => new JobContext(x, cancellationToken));
         FunctionName = functionName;
         BatchKey = batchKey;
     }
@@ -51,17 +54,37 @@ public class JobContext
     {
         Result = result;
     }
+}
 
-    public T To<T>()
+public class JobContext<T> : JobContext
+{
+    private readonly IGearQueueSerializer _serializer;
+    private readonly IEnumerable<JobContext<T>>? _batchContexts;
+    public override IEnumerable<JobContext<T>> Batches => _batchContexts is null
+        ? throw new Exception("This is not a batch context")
+        : _batchContexts;
+    
+    private T? _job;
+    
+    internal JobContext(IGearQueueSerializer serializer, JobAssign jobAssign, CancellationToken cancellationToken) : base(jobAssign, cancellationToken)
     {
-        return _serializer!.Deserialize<T>(Data);
+        _serializer = serializer;
     }
 
-    public IEnumerable<T> ToBatch<T>()
+    internal JobContext(IGearQueueSerializer serializer, string functionName, IEnumerable<JobAssign> jobs, string? batchKey, CancellationToken cancellationToken) : base(functionName, cancellationToken)
     {
-        foreach (var job in Batches)
+        _serializer = serializer;
+        _batchContexts = jobs.Select(x => new JobContext<T>(serializer, x, cancellationToken));
+        BatchKey = batchKey;
+    }
+
+    public T Job
+    {
+        get
         {
-            yield return job.To<T>();
+            _job ??= _serializer.Deserialize<T>(Data);
+
+            return _job;
         }
     }
 }

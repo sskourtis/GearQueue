@@ -1,5 +1,7 @@
+using System.Reflection;
 using System.Text;
 using GearQueue.Extensions.Microsoft.DependencyInjection;
+using GearQueue.Json;
 using GearQueue.Producer;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +15,8 @@ builder.Services.AddGearQueue(g =>
     g.AddProducer(builder.Configuration.GetConnectionString("Producer")!);
     g.AddNamedProducer("primary", builder.Configuration.GetConnectionString("ProducerA")!);
     g.AddNamedProducer("secondary", builder.Configuration.GetConnectionString("ProducerB")!);
+    
+    g.RegisterTypedProducerFromAssembly(Assembly.GetAssembly(typeof(Program))!, new GearQueueJsonSerializer());
 });
 
 builder.Services.AddSingleton<JobCounter>();

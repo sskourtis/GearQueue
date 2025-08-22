@@ -1,20 +1,19 @@
 using System.Collections.Concurrent;
 using GearQueue.Consumer.Pipeline;
+using GearQueue.Logging;
 using GearQueue.Options;
 using GearQueue.Protocol.Request;
 using GearQueue.Protocol.Response;
-using GearQueue.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ObjectPool;
 
 namespace GearQueue.Consumer.Coordinators;
 
 internal class BatchAbstractHandlerExecutionCoordinator(
-    IGearQueueSerializer? serializer,
     ILoggerFactory loggerFactory,
     ConsumerPipeline consumerPipeline,
     GearQueueConsumerOptions options,
-    Dictionary<string, Type> handlers) 
+    Dictionary<string, HandlerOptions> handlers) 
     : AbstractHandlerExecutionCoordinator( 
         loggerFactory,
         consumerPipeline, 
@@ -22,6 +21,7 @@ internal class BatchAbstractHandlerExecutionCoordinator(
         new Dictionary<int, Func<string, JobResult, Task>>(), 
         new ConcurrentDictionary<Guid, TaskCompletionSource<bool>>())
 {
+    private readonly ILogger<IGearQueueConsumer> _logger = loggerFactory.CreateLogger<IGearQueueConsumer>();
     private readonly ObjectPool<BatchData> _batchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
     private readonly List<BatchData> _pendingBatches = [];
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);
@@ -134,9 +134,7 @@ internal class BatchAbstractHandlerExecutionCoordinator(
     {
         try
         {
-            var jobContext = new JobContext(serializer, batchData.Function, batchData.Jobs.Select(j => j.Job), batchData.Key, cancellationToken);
-            
-            var result = await InvokeHandler(jobContext);
+            var result = await InvokeHandler(batchData, cancellationToken);
             
             foreach (var job in batchData.Jobs)
             {
@@ -153,6 +151,32 @@ internal class BatchAbstractHandlerExecutionCoordinator(
             _batchDataPool.Return(batchData);
             _handlerSemaphore.Release();
             ActiveJobs!.Remove(batchProcessingId, out _);
+        }
+    }
+    
+    private async Task<JobResult> InvokeHandler(BatchData batch, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!handlers.TryGetValue(batch.Function, out var handlerOptions))
+            {
+                _logger.LogMissingHandlerType(batch.Function);
+
+                return JobResult.PermanentFailure;
+            }
+            
+            var context = handlerOptions.JobContextFactory.CreateBatch(batch.Function, batch.Jobs.Select(j => j.Job), batch.Key, cancellationToken);
+            
+            context.HandlerType = handlerOptions.Type;
+
+            await consumerPipeline.InvokeAsync(context);
+
+            return context.Result ?? JobResult.PermanentFailure;
+        }
+        catch (Exception e)
+        {
+            _logger.LogConsumerException(e);
+            return JobResult.PermanentFailure;
         }
     }
 

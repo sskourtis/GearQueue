@@ -2,15 +2,13 @@ using System.Collections.Concurrent;
 using GearQueue.Consumer.Pipeline;
 using GearQueue.Options;
 using GearQueue.Protocol.Response;
-using GearQueue.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Coordinators;
 
 internal class AsynchronousAbstractHandlerExecutionCoordinator(
-    IGearQueueSerializer? serializer,
     ConsumerPipeline consumerPipeline,
-    Dictionary<string, Type> handlers,
+    Dictionary<string, HandlerOptions> handlers,
     GearQueueConsumerOptions options,
     ILoggerFactory loggerFactory) 
     : AbstractHandlerExecutionCoordinator(
@@ -52,9 +50,7 @@ internal class AsynchronousAbstractHandlerExecutionCoordinator(
     {
         try
         {
-            var jobContext = new JobContext(serializer, job, cancellationToken);
-            
-            var result = await InvokeHandler(jobContext);
+            var result = await InvokeHandler(job, cancellationToken);
 
             if (JobResultCallback!.TryGetValue(connectionId, out var callback))
             {

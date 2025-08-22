@@ -3,9 +3,9 @@ using GearQueue.Consumer;
 
 namespace WorkerExample;
 
-public class ExampleHandler(ILogger<ExampleHandler> logger) : IGearQueueHandler
+public class ExampleHandler(ILogger<ExampleHandler> logger) : GearQueueTypedHandler<string>
 {
-    public async Task<JobResult> Consume(JobContext context)
+    public override async Task<JobResult> Consume(JobContext<string> context)
     {
         logger.LogInformation(message: Encoding.UTF8.GetString(context.Data));
             

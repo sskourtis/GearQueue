@@ -265,9 +265,9 @@ public class GearQueueConfigurator
     {
         var uniqueName = Guid.NewGuid().ToString();
         
-        foreach (var (_, (type, lifetime)) in registration.HandlerMapping)
+        foreach (var (_, (handlerOptions, lifetime)) in registration.HandlerMapping)
         {
-            _services.Add(new ServiceDescriptor(type, type, lifetime));    
+            _services.Add(new ServiceDescriptor(handlerOptions.Type, handlerOptions.Type, lifetime));    
         }
 
         if (registration.Section is not null)

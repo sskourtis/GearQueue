@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleUtils", "Samples\Samp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.Newtonsoft.Json", "GearQueue.Newtonsoft.Json\GearQueue.Newtonsoft.Json.csproj", "{5409C5DC-F703-4CBE-843B-0A3E7A76AEA1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.ProtoBufNet", "GearQueue.ProtoBufNet\GearQueue.ProtoBufNet.csproj", "{0ABD9760-DEC9-433C-BE3A-E1D0C52240CF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,10 @@ Global
 		{5409C5DC-F703-4CBE-843B-0A3E7A76AEA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5409C5DC-F703-4CBE-843B-0A3E7A76AEA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5409C5DC-F703-4CBE-843B-0A3E7A76AEA1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0ABD9760-DEC9-433C-BE3A-E1D0C52240CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0ABD9760-DEC9-433C-BE3A-E1D0C52240CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0ABD9760-DEC9-433C-BE3A-E1D0C52240CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0ABD9760-DEC9-433C-BE3A-E1D0C52240CF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1B3435AF-79C5-4FBB-AD17-155F73E1D0E3} = {25FFDCCC-D779-4960-B5DF-556FC920FE82}

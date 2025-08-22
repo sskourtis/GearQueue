@@ -1,7 +1,7 @@
 using GearQueue.Consumer;
 using SampleUtils;
 
-namespace WorkerExample;
+namespace WorkerExample.Handlers;
 
 public class ExampleBatchHandler(ILogger<ExampleBatchHandler> logger) : AbstractBatchHandler<JobContract>
 {

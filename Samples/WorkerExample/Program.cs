@@ -1,6 +1,7 @@
 using GearQueue.Extensions.Microsoft.DependencyInjection;
 using GearQueue.Json;
-using WorkerExample;
+using WorkerExample.Handlers;
+using WorkerExample.Middlewares;
 
 var builder = Host.CreateApplicationBuilder(args);
 

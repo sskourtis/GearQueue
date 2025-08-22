@@ -1,8 +1,9 @@
 using GearQueue.Consumer;
 using GearQueue.Consumer.Pipeline;
 using SampleUtils;
+using WorkerExample.Handlers;
 
-namespace WorkerExample;
+namespace WorkerExample.Middlewares;
 
 public class ThroughputTrackingMiddleware(ILogger<ExampleHandler> logger): IGearQueueMiddleware
 {

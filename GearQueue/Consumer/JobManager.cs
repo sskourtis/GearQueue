@@ -44,7 +44,7 @@ internal class JobManager(
     {
         TimeSpan? nextTimeout = null;
         
-        /*if (_batchJobManagers.Length > 0)
+        if (_batchJobManagers.Length > 0)
         {
             (var currentJobHandledInBatch, nextTimeout) = await ArrangeBatchManagers(connectionId, job, cancellationToken);
 
@@ -52,7 +52,7 @@ internal class JobManager(
             {
                 return new ExecutionResult();
             }
-        }*/
+        }
         
         if (job is null)
         {

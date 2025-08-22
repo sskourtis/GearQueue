@@ -2,62 +2,321 @@
 
 use warnings;
 use strict;
+use Time::HiRes qw(time);
+use POSIX qw(strftime);
 
 $|=1;
 
-sub repeat {
-	my $char = shift;
-	my $times = shift;
-	my $str = '';
-	for (my $i=0; $i <= $times; $i++) {
-       $str .= $char;
-    }
-	return $str;
+# Configuration
+my $refresh_rate = 1; # seconds
+my $history_length = 60; # keep 60 samples for trend analysis
+
+# Data storage
+my %job_history = ();
+my $start_time = time();
+
+# Color codes
+my $RESET = "\033[0m";
+my $BOLD = "\033[1m";
+my $RED = "\033[31m";
+my $GREEN = "\033[32m";
+my $YELLOW = "\033[33m";
+my $BLUE = "\033[34m";
+my $MAGENTA = "\033[35m";
+my $CYAN = "\033[36m";
+my $WHITE = "\033[37m";
+my $BG_BLUE = "\033[44m";
+
+sub clear_screen {
+    print "\033[2J\033[H";
 }
 
-while ( 1 ) {
-	system("clear");
+sub get_terminal_width {
+    my $width = 80; # default
+    if (open(my $fh, '-|', 'tput cols 2>/dev/null')) {
+        chomp($width = <$fh>);
+        close($fh);
+    }
+    return $width || 80;
+}
 
-	my @statuses = `gearadmin --status`;
-	my @jobs = ();
+sub repeat_char {
+    my ($char, $times) = @_;
+    return $char x $times;
+}
 
-	# Max char length of first column
-	my $max_length = 10;
-	
-	foreach my $job ( @statuses ) {
-		$job =~ s/^\s+|\s+$//g;
-		if ($job eq '.') {
-			next;
-		}
+sub format_number {
+    my $num = shift;
+    if ($num >= 1000000) {
+        return sprintf("%.1fM", $num / 1000000);
+    } elsif ($num >= 1000) {
+        return sprintf("%.1fK", $num / 1000);
+    }
+    return $num;
+}
 
-		my @job_data = split /\s+/, $job;
+sub get_trend_indicator {
+    my ($job_name, $current_queue) = @_;
+    
+    return "   " unless exists $job_history{$job_name};
+    
+    my $history = $job_history{$job_name};
+    return "   " if @$history < 2;
+    
+    my $prev_queue = $history->[-2]->{queue};
+    my $diff = $current_queue - $prev_queue;
+    
+    if ($diff > 0) {
+        return sprintf(" %s↗%s ", $RED, $RESET);
+    } elsif ($diff < 0) {
+        return sprintf(" %s↘%s ", $GREEN, $RESET);
+    } else {
+        return sprintf(" %s→%s ", $YELLOW, $RESET);
+    }
+}
 
-		$max_length = length($job_data[0]) > $max_length ? length($job_data[0]) : $max_length;
+sub get_queue_rate {
+    my $job_name = shift;
+    
+    return 0 unless exists $job_history{$job_name};
+    
+    my $history = $job_history{$job_name};
+    return 0 if @$history < 5; # Need at least 5 samples
+    
+    # Safely get last 5 samples without going beyond array bounds
+    my $num_samples = @$history >= 5 ? 5 : @$history;
+    my $start_index = @$history - $num_samples;
+    my @recent = @$history[$start_index .. @$history - 1];
+    
+    my $time_span = $recent[-1]->{timestamp} - $recent[0]->{timestamp};
+    
+    return 0 if $time_span <= 0;
+    
+    my $queue_change = $recent[-1]->{queue} - $recent[0]->{queue};
+    return $queue_change / $time_span; # jobs per second
+}
 
-		push @jobs, {
-			name 		=> $job_data[0],
-			queue		=> $job_data[1] * 1,
-			running		=> $job_data[2] * 1,
-			workers		=> $job_data[3] * 1,
-			available	=> ($job_data[3] - $job_data[2]) * 1,
-			status		=> ($job_data[3] * 1 > 0 ? 'Up' : 'Down'),
-		};
-	}
+sub get_status_color {
+    my ($workers, $available, $queue) = @_;
+    
+    if ($workers == 0) {
+        return $RED;
+    } elsif ($available == 0 && $queue > 0) {
+        return $YELLOW;
+    } elsif ($queue == 0) {
+        return $GREEN;
+    } else {
+        return $CYAN;
+    }
+}
 
-	print("GEARMAN STATUS\n\n");
-	printf("%-".$max_length."s | %-7s | %-7s | %-7s | %-7s | %-7s\n", "Name", "Workers", "Avail", "Running", "Queue", "Status");
-	printf(" %s\n", repeat('-', $max_length + 5*7 + 3 * 5 - 4) );	
-	foreach my $job ( @jobs ) {
-		printf("%-".$max_length."s | %-7s | %-7s | %-7s | %-7s | %-7s\n", 
-			$job->{name}, 
-			$job->{workers}, 
-			$job->{available}, 
-			$job->{running}, 
-			$job->{queue},
-			$job->{status});
-	}
-	printf(" %s\n", repeat('-', $max_length + 5*7 + 3 * 5 - 4) );	
-	
-	sleep 5;
-	
+sub draw_mini_chart {
+    my ($job_name, $width) = @_;
+    $width ||= 10;
+    
+    return " " x $width unless exists $job_history{$job_name};
+    
+    my $history = $job_history{$job_name};
+    return " " x $width if @$history < 2;
+    
+    # Safely get recent data - don't try to access more than we have
+    my $start_index = @$history >= $width ? @$history - $width : 0;
+    my @recent_queues = map { $_->{queue} } @$history[$start_index .. @$history - 1];
+    
+    my $max_queue = (sort { $b <=> $a } @recent_queues)[0] || 1;
+    my $chart = "";
+    
+    foreach my $queue (@recent_queues) {
+        my $height = int(($queue / $max_queue) * 8);
+        my $char = $height == 0 ? "▁" : 
+                   $height <= 1 ? "▂" :
+                   $height <= 2 ? "▃" :
+                   $height <= 3 ? "▄" :
+                   $height <= 4 ? "▅" :
+                   $height <= 5 ? "▆" :
+                   $height <= 6 ? "▇" : "█";
+        $chart .= $char;
+    }
+    
+    # Pad with spaces if we don't have enough data points
+    while (length($chart) < $width) {
+        $chart = " " . $chart;
+    }
+    
+    return sprintf("%-${width}s", $chart);
+}
+
+sub print_header {
+    my $terminal_width = get_terminal_width();
+    my $uptime = int(time() - $start_time);
+    my $current_time = strftime("%H:%M:%S", localtime());
+    
+    clear_screen();
+    
+    # Title bar
+    my $title = " GEARMAN STATUS MONITOR ";
+    my $padding = int(($terminal_width - length($title)) / 2);
+    print $BG_BLUE . $WHITE . $BOLD;
+    print repeat_char(" ", $padding) . $title . repeat_char(" ", $terminal_width - $padding - length($title));
+    print $RESET . "\n";
+    
+    # Info line
+    printf "${BOLD}Time: ${CYAN}%s${RESET} │ ${BOLD}Uptime: ${CYAN}%02d:%02d:%02d${RESET} │ ${BOLD}Refresh: ${CYAN}%ds${RESET}\n\n",
+           $current_time, 
+           int($uptime/3600), 
+           int(($uptime%3600)/60), 
+           $uptime%60,
+           $refresh_rate;
+}
+
+sub print_job_table {
+    my @jobs = @_;
+    return unless @jobs;
+    
+    # Calculate column widths
+    my $name_width = 15;
+    my $chart_width = 12;
+    
+    foreach my $job (@jobs) {
+        $name_width = length($job->{name}) + 2 if length($job->{name}) + 2 > $name_width;
+    }
+    
+    # Header
+    printf "${BOLD}%-${name_width}s│%8s│%8s│%8s│%8s│%6s│%4s│%8s│%-${chart_width}s${RESET}\n",
+           "Job Name", "Workers", "Avail", "Running", "Queue", "Status", "Trend", "Rate/s", "Chart";
+    
+    print repeat_char("─", $name_width) . "┼" . 
+          repeat_char("─", 8) . "┼" .
+          repeat_char("─", 8) . "┼" .
+          repeat_char("─", 8) . "┼" .
+          repeat_char("─", 8) . "┼" .
+          repeat_char("─", 6) . "┼" .
+          repeat_char("─", 5) . "┼" .
+          repeat_char("─", 8) . "┼" .
+          repeat_char("─", $chart_width) . "\n";
+    
+    # Sort jobs by queue size (descending)
+    my @sorted_jobs = sort { $b->{queue} <=> $a->{queue} } @jobs;
+    
+    foreach my $job (@sorted_jobs) {
+        my $status_color = get_status_color($job->{workers}, $job->{available}, $job->{queue});
+        my $trend = get_trend_indicator($job->{name}, $job->{queue});
+        my $rate = get_queue_rate($job->{name});
+        my $chart = draw_mini_chart($job->{name}, $chart_width);
+        
+        printf "%-${name_width}s│%s%8s${RESET}│%s%8s${RESET}│%s%8s${RESET}│%s%8s${RESET}│%s%6s${RESET}│ %s │%s%8.1f${RESET}│%s\n",
+               $job->{name},
+               $status_color, format_number($job->{workers}),
+               $status_color, format_number($job->{available}),
+               $status_color, format_number($job->{running}),
+               $status_color, format_number($job->{queue}),
+               $status_color, $job->{status},
+               $trend,
+               ($rate > 0 ? $RED : $rate < 0 ? $GREEN : $RESET), $rate,
+               $CYAN . $chart . $RESET;
+    }
+    
+    print repeat_char("─", $name_width + 8*6 + 4 + 8 + $chart_width + 7) . "\n";
+}
+
+sub print_summary {
+    my @jobs = @_;
+    
+    my $total_workers = 0;
+    my $total_available = 0;
+    my $total_running = 0;
+    my $total_queue = 0;
+    my $active_functions = 0;
+    my $down_functions = 0;
+    
+    foreach my $job (@jobs) {
+        $total_workers += $job->{workers};
+        $total_available += $job->{available};
+        $total_running += $job->{running};
+        $total_queue += $job->{queue};
+        
+        if ($job->{workers} > 0) {
+            $active_functions++;
+        } else {
+            $down_functions++;
+        }
+    }
+    
+    my $efficiency = $total_workers > 0 ? sprintf("%.1f%%", ($total_running / $total_workers) * 100) : "N/A";
+    
+    print "\n${BOLD}SUMMARY${RESET}\n";
+    printf "${BOLD}Functions:${RESET} ${GREEN}%d active${RESET}, ${RED}%d down${RESET} │ ",
+           $active_functions, $down_functions;
+    printf "${BOLD}Workers:${RESET} ${CYAN}%s total${RESET}, ${GREEN}%s available${RESET}, ${YELLOW}%s running${RESET}\n",
+           format_number($total_workers), format_number($total_available), format_number($total_running);
+    printf "${BOLD}Queue:${RESET} ${MAGENTA}%s jobs${RESET} │ ${BOLD}Efficiency:${RESET} %s\n",
+           format_number($total_queue), $efficiency;
+}
+
+sub store_job_history {
+    my @jobs = @_;
+    my $current_time = time();
+    
+    foreach my $job (@jobs) {
+        my $job_name = $job->{name};
+        
+        $job_history{$job_name} = [] unless exists $job_history{$job_name};
+        
+        push @{$job_history{$job_name}}, {
+            timestamp => $current_time,
+            queue => $job->{queue},
+            workers => $job->{workers},
+            running => $job->{running}
+        };
+        
+        # Keep only recent history
+        if (@{$job_history{$job_name}} > $history_length) {
+            shift @{$job_history{$job_name}};
+        }
+    }
+}
+
+# Main loop
+while (1) {
+    my @statuses = `gearadmin --status 2>/dev/null`;
+    my @jobs = ();
+    
+    # Max char length of first column
+    my $max_length = 10;
+    
+    foreach my $job (@statuses) {
+        $job =~ s/^\s+|\s+$//g;
+        next if ($job eq '.' || $job eq '');
+        
+        my @job_data = split /\s+/, $job;
+        next if @job_data < 4;
+        
+        $max_length = length($job_data[0]) > $max_length ? length($job_data[0]) : $max_length;
+        
+        push @jobs, {
+            name      => $job_data[0],
+            queue     => $job_data[1] * 1,
+            running   => $job_data[2] * 1,
+            workers   => $job_data[3] * 1,
+            available => ($job_data[3] - $job_data[2]) * 1,
+            status    => ($job_data[3] * 1 > 0 ? 'Up' : 'Down'),
+        };
+    }
+    
+    # Store history for trend analysis
+    store_job_history(@jobs);
+    
+    # Display
+    print_header();
+    
+    if (@jobs) {
+        print_job_table(@jobs);
+        print_summary(@jobs);
+    } else {
+        print "${RED}${BOLD}No gearman functions found or gearadmin command failed${RESET}\n";
+    }
+    
+    print "\n${WHITE}Press Ctrl+C to exit${RESET}\n";
+    
+    sleep $refresh_rate;
 }

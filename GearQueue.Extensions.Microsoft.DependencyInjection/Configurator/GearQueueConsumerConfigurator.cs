@@ -13,24 +13,23 @@ public class GearQueueConsumerConfigurator
         _consumerRegistration = consumerRegistration;
     }
 
-    public GearQueueConsumerConfigurator SetHandler<T, TY>(string functionName, IGearQueueSerializer serializer, ServiceLifetime lifetime = ServiceLifetime.Transient) 
-        where T : GearQueueTypedHandler<TY>
+    public GearQueueConsumerConfigurator SetHandler<T>(string functionName, IGearQueueSerializer serializer, ServiceLifetime lifetime = ServiceLifetime.Transient) 
+        where T : IHandler
     {
         _consumerRegistration.HandlerMapping[functionName] = (new HandlerOptions
         {
             Type = typeof(T),
-            JobContextFactory = new JobContextFactory<T>(serializer)
+            Serializer = serializer
         }, lifetime);
         return this;
     }
     
     public GearQueueConsumerConfigurator SetHandler<T>(string functionName, ServiceLifetime lifetime = ServiceLifetime.Transient) 
-        where T : IGearQueueHandler
+        where T : IHandler
     {
         _consumerRegistration.HandlerMapping[functionName] = (new HandlerOptions
         {
-            Type = typeof(T),
-            JobContextFactory = new JobContextFactory(),
+            Type = typeof(T)
         }, lifetime);
         return this;
     }

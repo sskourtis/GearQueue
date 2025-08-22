@@ -2,7 +2,7 @@ namespace GearQueue.Consumer.Provider;
 
 public interface IGearQueueHandlerProvider : IDisposable
 {
-    IGearQueueHandler? Get<T>() where T : IGearQueueHandler;
+    IHandler? Get<T>() where T : IHandler;
 
-    IGearQueueHandler? Get(Type type);
+    IHandler? Get(Type type);
 }

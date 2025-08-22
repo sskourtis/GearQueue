@@ -2,14 +2,14 @@ namespace GearQueue.Consumer.Provider;
 
 public class SimpleHandlerProvider : IGearQueueHandlerProvider
 {
-    public IGearQueueHandler? Get<T>() where T : IGearQueueHandler
+    public IHandler? Get<T>() where T : IHandler
     {
         return Activator.CreateInstance<T>();
     }
 
-    public IGearQueueHandler? Get(Type type)
+    public IHandler? Get(Type type)
     {
-        return Activator.CreateInstance(type) as IGearQueueHandler;
+        return Activator.CreateInstance(type) as IHandler;
     }
     
     public void Dispose()

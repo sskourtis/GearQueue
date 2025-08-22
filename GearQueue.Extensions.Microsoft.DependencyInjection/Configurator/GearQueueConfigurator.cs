@@ -16,6 +16,7 @@ namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
 
 public class GearQueueConfigurator
 {
+    private IGearQueueSerializer? _defaultSerializer;
     private readonly IServiceCollection _services;
 
     private Action<GearQueueProducerOptions>? _defaultProducerOptions;
@@ -43,6 +44,11 @@ public class GearQueueConfigurator
         }
     }
 
+    public void SetDefaultSerializer(IGearQueueSerializer serializer)
+    {
+        _defaultSerializer = serializer; 
+    }
+
     public void SetDefaultProducerOptions(Action<GearQueueProducerOptions> options)
     {
         _defaultProducerOptions = options;
@@ -53,47 +59,50 @@ public class GearQueueConfigurator
         _defaultConsumerOptions = options;
     }
 
-    public void AddProducer(string connectionString, Action<GearQueueProducerOptions>? configure = null)
+    public void AddProducer(string connectionString, Action<GearQueueProducerOptions>? configure = null, IGearQueueSerializer? serializer = null)
     {
-        AddNamedProducer("default", connectionString, configure);
+        AddNamedProducer("default", connectionString, configure, serializer);
     }
     
-    public void AddNamedProducer(string name, string connectionString, Action<GearQueueProducerOptions>? configure = null)
+    public void AddNamedProducer(string name, string connectionString, Action<GearQueueProducerOptions>? configure = null, IGearQueueSerializer? serializer = null)
     {
         AddProducer(new ProducerRegistration
         {
             Name = name,
             ConnectionString = connectionString,
-            ConfigureOptions = configure
+            ConfigureOptions = configure,
+            Serializer = serializer,
         });
     }
     
-    public void AddProducer(IConfigurationSection section, Action<GearQueueProducerOptions>? configure = null)
+    public void AddProducer(IConfigurationSection section, Action<GearQueueProducerOptions>? configure = null, IGearQueueSerializer? serializer = null)
     {
-        AddNamedProducer("default", section, configure);
+        AddNamedProducer("default", section, configure, serializer);
     }
     
-    public void AddNamedProducer(string name, IConfigurationSection section, Action<GearQueueProducerOptions>? configure = null)
+    public void AddNamedProducer(string name, IConfigurationSection section, Action<GearQueueProducerOptions>? configure = null, IGearQueueSerializer? serializer = null)
     {
         AddProducer(new ProducerRegistration
         {
             Name = name,
             Section = section,
-            ConfigureOptions = configure
+            ConfigureOptions = configure,
+            Serializer = serializer,
         });
     }
     
-    public void AddProducer(Action<GearQueueProducerOptions> configure)
+    public void AddProducer(Action<GearQueueProducerOptions> configure, IGearQueueSerializer? serializer = null)
     {
-        AddNameProducer("default", configure);
+        AddNameProducer("default", configure, serializer);
     }
 
-    public void AddNameProducer(string name, Action<GearQueueProducerOptions> configure)
+    public void AddNameProducer(string name, Action<GearQueueProducerOptions> configure, IGearQueueSerializer? serializer = null)
     {
         AddProducer(new ProducerRegistration
         {
             Name = name,
-            ConfigureOptions = configure
+            ConfigureOptions = configure,
+            Serializer = serializer,
         });
     }
 
@@ -130,7 +139,7 @@ public class GearQueueConfigurator
                 .Validate(options)
                 .ThrowIfInvalid();
             
-            var instance = new GearQueueProducer(options, s.GetRequiredService<ILoggerFactory>())
+            var instance = new GearQueueProducer(options, registration.Serializer ?? _defaultSerializer, s.GetRequiredService<ILoggerFactory>())
             {
                 Name = registration.Name,
             };
@@ -149,7 +158,7 @@ public class GearQueueConfigurator
         }
     }
     
-    public void RegisterTypedProducerFromAssembly<TSerializer>(Assembly assembly, TSerializer serializer) where TSerializer : class, IGearQueueSerializer
+    public void RegisterTypedProducerFromAssembly(Assembly assembly, IGearQueueSerializer? serializer = null)
     {
         var foundTypes = assembly.GetTypes()
             .Select(t => new
@@ -168,21 +177,20 @@ public class GearQueueConfigurator
             _services.TryAddSingleton(serviceType, s =>
             {
                 var baseProducer = s.GetRequiredService<IGearQueueProducer>();
-                return Activator.CreateInstance(implementationType, typeInfo.Function, serializer, baseProducer)!;
+                return Activator.CreateInstance(implementationType, typeInfo.Function, serializer ?? _defaultSerializer, baseProducer)!;
             });
         }
     }
 
-    public void RegisterTypedProducer<TJob, TSerializer>(string functionName, TSerializer serializer) where TSerializer : class, IGearQueueSerializer
+    public void RegisterTypedProducer<TJob>(string functionName, IGearQueueSerializer? serializer = null)
     {
         _services.TryAddSingleton<IGearQueueProducer<TJob>>(
             s => new GearQueueProducer<TJob>(functionName,
-                serializer,
+                (serializer ?? _defaultSerializer)!,
                 s.GetRequiredService<IGearQueueProducer>()));
     }
     
-    public void RegisterTypedProducer<TJob, TSerializer>(string functionName, TSerializer serializer, string producerName)
-        where TSerializer : class, IGearQueueSerializer
+    public void RegisterTypedProducer<TJob>(string functionName, string producerName, IGearQueueSerializer? serializer = null)
     {
         _services.TryAddSingleton<IGearQueueProducer<TJob>>(
             s =>
@@ -190,12 +198,12 @@ public class GearQueueConfigurator
                 var producerFactory = s.GetRequiredService<IGearQueueProducerFactory>();
                 
                 return new GearQueueProducer<TJob>(functionName,
-                    serializer,
+                    (serializer ?? _defaultSerializer)!,
                     producerFactory.GetRequired(producerName));
             });
     }
     
-    public void RegisterTypedProducerFromAssembly<TSerializer>(Assembly assembly, TSerializer serializer, string producerName) where TSerializer : class, IGearQueueSerializer
+    public void RegisterTypedProducerFromAssembly(Assembly assembly, string producerName, IGearQueueSerializer? serializer = null)
     {
         var foundTypes = assembly.GetTypes()
             .Select(t => new
@@ -215,7 +223,7 @@ public class GearQueueConfigurator
             {
                 var producerFactory = s.GetRequiredService<IGearQueueProducerFactory>();
                 
-                return Activator.CreateInstance(implementationType, typeInfo.Function, serializer, producerFactory.GetRequired(producerName))!;
+                return Activator.CreateInstance(implementationType, typeInfo.Function, serializer ?? _defaultSerializer, producerFactory.GetRequired(producerName))!;
             });
         }
     }
@@ -315,7 +323,12 @@ public class GearQueueConfigurator
             return new GearQueueConsumer(
                 options,
                 registration.PipelineBuilder.Build(options.CreateScope, s),
-                registration.HandlerMapping.ToDictionary(x => x.Key, x => x.Value.Item1),
+                registration.HandlerMapping.ToDictionary(x => x.Key, x =>
+                {
+                    x.Value.Item1.Serializer ??= _defaultSerializer;
+
+                    return x.Value.Item1;
+                }),
                 s.GetRequiredService<ILoggerFactory>());
         });
     }

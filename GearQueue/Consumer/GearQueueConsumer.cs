@@ -21,7 +21,7 @@ public class GearQueueConsumer(
     {
         foreach (var (_, handlerOptions) in handlers)
         {
-            if (!handlerOptions.Type.IsAssignableTo(typeof(IGearQueueHandler)))
+            if (!handlerOptions.Type.IsAssignableTo(typeof(IHandler)))
             {
                 throw new ApplicationException($"Handler {handlerOptions.Type.FullName} does not implement IGearQueueHandler");
             }

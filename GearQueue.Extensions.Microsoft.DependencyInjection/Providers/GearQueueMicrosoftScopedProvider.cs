@@ -8,14 +8,14 @@ public class GearQueueMicrosoftScopedProvider(IServiceScopeFactory scopeFactory)
 {
     private readonly IServiceScope _serviceScope = scopeFactory.CreateScope();
     
-    public IGearQueueHandler? Get<T>() where T : IGearQueueHandler
+    public IHandler? Get<T>() where T : IHandler
     {
         return _serviceScope.ServiceProvider.GetService<T>();
     }
 
-    public IGearQueueHandler? Get(Type type)
+    public IHandler? Get(Type type)
     {
-        return _serviceScope.ServiceProvider.GetService(type) as IGearQueueHandler;
+        return _serviceScope.ServiceProvider.GetService(type) as IHandler;
     }
 
     public void Dispose()

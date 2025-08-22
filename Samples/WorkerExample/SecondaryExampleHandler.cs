@@ -3,7 +3,7 @@ using SampleUtils;
 
 namespace WorkerExample;
 
-public class SecondaryExampleHandler(ILogger<SecondaryExampleHandler> logger) : IGearQueueHandler
+public class SecondaryExampleHandler(ILogger<SecondaryExampleHandler> logger) : IHandler
 {
     private readonly InvocationsTracker _invocationsTracker = new();
     

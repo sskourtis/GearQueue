@@ -165,9 +165,14 @@ internal class BatchAbstractHandlerExecutionCoordinator(
                 return JobResult.PermanentFailure;
             }
             
-            var context = handlerOptions.JobContextFactory.CreateBatch(batch.Function, batch.Jobs.Select(j => j.Job), batch.Key, cancellationToken);
-            
-            context.HandlerType = handlerOptions.Type;
+            var context = new JobContext(batch.Function,
+                batch.Jobs.Select(j => j.Job), 
+                batch.Key, 
+                handlerOptions.Serializer, 
+                cancellationToken)
+            {
+                HandlerType = handlerOptions.Type
+            };
 
             await consumerPipeline.InvokeAsync(context);
 

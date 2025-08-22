@@ -63,9 +63,10 @@ internal abstract class AbstractHandlerExecutionCoordinator(
                 return JobResult.PermanentFailure;
             }
             
-            var context = handlerOptions.JobContextFactory.Create(job, cancellationToken);
-            
-            context.HandlerType = handlerOptions.Type;
+            var context = new JobContext(job, handlerOptions.Serializer, cancellationToken)
+            {
+                HandlerType = handlerOptions.Type
+            };
 
             await consumerPipeline.InvokeAsync(context);
 

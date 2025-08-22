@@ -1,14 +1,14 @@
-using System.Text;
 using GearQueue.Consumer;
+using SampleUtils;
 
 namespace WorkerExample;
 
-public class ExampleHandler(ILogger<ExampleHandler> logger) : GearQueueTypedHandler<string>
+public class ExampleHandler(ILogger<ExampleHandler> logger) : AbstractHandler<JobContract>
 {
-    public override async Task<JobResult> Consume(JobContext<string> context)
-    {
-        logger.LogInformation(message: Encoding.UTF8.GetString(context.Data));
+    public override Task<JobResult> Consume(JobContract job, JobContext context)
+    {        
+        logger.LogInformation("Got Job {data}", job.TestValue);
             
-        return JobResult.Success;
+        return Task.FromResult(JobResult.Success);
     }
 }

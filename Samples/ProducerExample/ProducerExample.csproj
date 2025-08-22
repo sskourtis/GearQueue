@@ -14,6 +14,7 @@
       <ProjectReference Include="..\..\GearQueue.Extensions.Microsoft.DependencyInjection\GearQueue.Extensions.Microsoft.DependencyInjection.csproj" />
       <ProjectReference Include="..\..\GearQueue.Json\GearQueue.Json.csproj" />
       <ProjectReference Include="..\..\GearQueue\GearQueue.csproj" />
+      <ProjectReference Include="..\SampleUtils\SampleUtils.csproj" />
     </ItemGroup>
 
 </Project>

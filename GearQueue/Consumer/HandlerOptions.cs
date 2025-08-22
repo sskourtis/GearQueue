@@ -1,11 +1,10 @@
-using GearQueue.Protocol.Response;
+using GearQueue.Serialization;
 
 namespace GearQueue.Consumer;
 
-public delegate JobContext JobContextCreatorDelegate(JobAssign jobAssign, CancellationToken cancellationToken);
-    
 public class HandlerOptions
 {
     public required Type Type { get; init; }
-    public required JobContextFactory JobContextFactory { get; init; }
+    
+    public IGearQueueSerializer? Serializer { get; set; }
 }

@@ -1,8 +1,11 @@
 using System.Reflection;
 using System.Text;
+using GearQueue.Consumer;
 using GearQueue.Extensions.Microsoft.DependencyInjection;
 using GearQueue.Json;
 using GearQueue.Producer;
+using Microsoft.AspNetCore.Mvc;
+using SampleUtils;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,11 +15,14 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddGearQueue(g =>
 {
+    g.SetDefaultSerializer(new GearQueueJsonSerializer());
+    
     g.AddProducer(builder.Configuration.GetConnectionString("Producer")!);
     g.AddNamedProducer("primary", builder.Configuration.GetConnectionString("ProducerA")!);
     g.AddNamedProducer("secondary", builder.Configuration.GetConnectionString("ProducerB")!);
-    
-    g.RegisterTypedProducerFromAssembly(Assembly.GetAssembly(typeof(Program))!, new GearQueueJsonSerializer());
+
+    g.RegisterTypedProducerFromAssembly(Assembly.GetAssembly(typeof(Program))!);
+    g.RegisterTypedProducerFromAssembly(Assembly.GetAssembly(typeof(JobContract))!);
 });
 
 builder.Services.AddSingleton<JobCounter>();
@@ -56,9 +62,9 @@ app.MapGet("/produce/{name}", async (IGearQueueProducerFactory factory, JobCount
     })
     .WithName("Produce from factory");
 
-app.MapGet("/produce", async (IGearQueueProducer producer, JobCounter counter) =>
+app.MapGet("/produce", async (IGearQueueProducer<JobContract> producer, JobCounter counter) =>
     {
-        var result = await producer.Produce("test-function", Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}"));
+        var result = await producer.Produce(new JobContract { TestValue = $"Test {Guid.NewGuid():N}" });
 
         if (result)
         {
@@ -71,9 +77,17 @@ app.MapGet("/produce", async (IGearQueueProducer producer, JobCounter counter) =
     })
     .WithName("Produce");
 
-app.MapGet("/produce-batch", async (IGearQueueProducer producer, JobCounter counter) =>
+app.MapGet("/produce-batch", async (IGearQueueProducer producer, JobCounter counter, [FromQuery] string? key) =>
     {
-        var result = await producer.Produce("test-batch-function", Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}"));
+        var result = await producer.Produce("test-batch-function", 
+            new JobContract
+            {
+                TestValue = $"Test {Guid.NewGuid():N}", 
+            },
+            new ProducerOptions
+            {
+                BatchKey = key,
+            });
 
         if (result)
         {

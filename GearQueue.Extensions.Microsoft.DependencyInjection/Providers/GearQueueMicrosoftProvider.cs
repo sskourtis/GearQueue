@@ -10,13 +10,13 @@ public class GearQueueMicrosoftProvider(IServiceProvider provider) : IGearQueueH
     {
     }
 
-    public IGearQueueHandler? Get<T>() where T : IGearQueueHandler
+    public IHandler? Get<T>() where T : IHandler
     {
         return provider.GetService<T>();
     }
 
-    public IGearQueueHandler? Get(Type type)
+    public IHandler? Get(Type type)
     {
-        return provider.GetService(type) as IGearQueueHandler;
+        return provider.GetService(type) as IHandler;
     }
 }

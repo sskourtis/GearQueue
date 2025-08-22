@@ -82,7 +82,7 @@ public class GearQueueProducer : IDisposable, INamedGearQueueProducer
             .ToArray<IConnectionPool>();
     }
     
-    public GearQueueProducer(GearQueueProducerOptions options, IGearQueueSerializer serializer, ILoggerFactory loggerFactory)
+    public GearQueueProducer(GearQueueProducerOptions options, IGearQueueSerializer? serializer, ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<GearQueueProducer>();
         _options = options;
@@ -215,10 +215,10 @@ public class GearQueueProducer : IDisposable, INamedGearQueueProducer
             
             RequestPacket requestPacket;
             
-            if (options.CorrelationId is not null || options.GroupKey is not null)
+            if (options.CorrelationId is not null || options.BatchKey is not null)
             {
                 requestPacket = RequestFactory.SubmitJob(functionName,
-                    UniqueId.Create(options.CorrelationId ?? Guid.NewGuid().ToString("N"), options.GroupKey), data, options.Priority);
+                    UniqueId.Create(options.CorrelationId ?? Guid.NewGuid().ToString("N"), options.BatchKey), data, options.Priority);
             }
             else
             {

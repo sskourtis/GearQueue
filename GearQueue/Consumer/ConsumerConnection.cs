@@ -13,7 +13,7 @@ namespace GearQueue.Consumer;
 internal class ConsumerConnection(
     ConsumerHostsOptions options,
     ICollection<string> functions,
-    AbstractHandlerExecutionCoordinator abstractHandlerExecutionCoordinator,
+    IJobManager jobManager,
     ILoggerFactory loggerFactory) : IDisposable
 {
     private readonly ILogger<IConsumer> _logger = loggerFactory.CreateLogger<IConsumer>();
@@ -21,7 +21,7 @@ internal class ConsumerConnection(
     
     internal void RegisterResultCallback()
     {
-        abstractHandlerExecutionCoordinator.RegisterAsyncResultCallback(_connection.Id, async (jobHandle, status) =>
+        jobManager.Executor.RegisterAsyncResultCallback(_connection.Id, async (jobHandle, status) =>
         {
             await SendResult(jobHandle, status).ConfigureAwait(false);
         });
@@ -50,7 +50,7 @@ internal class ConsumerConnection(
 
                 outOfOrderResponsePacket = null;
                 
-                var executionResult = await abstractHandlerExecutionCoordinator.ArrangeExecution(_connection.Id, job, cancellationToken).ConfigureAwait(false);
+                var executionResult = await jobManager.ArrangeExecution(_connection.Id, job, cancellationToken).ConfigureAwait(false);
                     
                 if (job != null)
                 {
@@ -62,12 +62,12 @@ internal class ConsumerConnection(
                     
                     continue;
                 }
-
+                
                 if (!options.UsePreSleep || 
                     // Avoid using presleep if we have to wake up less than 200ms from now.
                     // This is because the "GetPacket" after presleep is not stable if the cancellation token is extremely short.
                     // The instability is that we won't read the response packets after presleep in the correct order.
-                    (executionResult.MaximumSleepDelay.HasValue && executionResult.MaximumSleepDelay <= TimeSpan.FromMilliseconds(200)))
+                    (executionResult.MaximumSleepDelay.HasValue && executionResult.MaximumSleepDelay <= TimeSpan.FromMilliseconds(1000)))
                 {
                     await Task.Delay(executionResult.MaximumSleepDelay.HasValue && executionResult.MaximumSleepDelay.Value < options.PollingDelay 
                             ? executionResult.MaximumSleepDelay.Value 
@@ -79,6 +79,12 @@ internal class ConsumerConnection(
                 await _connection.SendPacket(RequestFactory.PreSleep(), cancellationToken).ConfigureAwait(false);
                 
                 ResponsePacket? noopResponse;
+
+                if (executionResult.MaximumSleepDelay.HasValue &&
+                    executionResult.MaximumSleepDelay.Value < TimeSpan.FromMilliseconds(1000))
+                {
+                    _logger.LogWarning("Sleep for {Delay}", executionResult.MaximumSleepDelay.Value);;
+                }
 
                 if (executionResult.MaximumSleepDelay.HasValue)
                 {
@@ -159,7 +165,7 @@ internal class ConsumerConnection(
 
     private async Task<JobAssign?> CheckForJob(CancellationToken cancellationToken = default)
     {
-        await _connection.SendPacket(abstractHandlerExecutionCoordinator.GrabJobPacket, cancellationToken).ConfigureAwait(false);
+        await _connection.SendPacket(jobManager.GrabJobPacket, cancellationToken).ConfigureAwait(false);
 			
         var response = await _connection.GetPacket(cancellationToken).ConfigureAwait(false);
 

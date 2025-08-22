@@ -7,7 +7,7 @@ public class ExampleHandler(ILogger<ExampleHandler> logger) : AbstractHandler<Jo
 {
     public override Task<JobResult> Consume(JobContract job, JobContext context)
     {        
-        logger.LogInformation("Got Job {data}", job.TestValue);
+        //logger.LogInformation("Got Job {data}", job.TestValue);
             
         return Task.FromResult(JobResult.Success);
     }

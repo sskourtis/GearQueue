@@ -26,11 +26,6 @@ public sealed class ConsumerOptions
     /// </para>
     /// </summary>
     public ConcurrencyStrategy ConcurrencyStrategy { get; set; } = ConcurrencyStrategy.AcrossServers;
-    
-    /// <summary>
-    /// Enable consuming jobs in batches
-    /// </summary>
-    public BatchOptions? Batch { get; set; } 
 
     /// <summary>
     /// This is a flag for the dependency injection extension library to create a scope when calling the handler

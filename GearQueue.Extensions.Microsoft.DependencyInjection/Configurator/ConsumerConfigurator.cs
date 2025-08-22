@@ -1,4 +1,5 @@
 using GearQueue.Consumer;
+using GearQueue.Options;
 using GearQueue.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,6 +35,30 @@ public class ConsumerConfigurator
         return this;
     }
 
+    
+    public ConsumerConfigurator SetBatchHandler<T>(string functionName, IGearQueueJobSerializer jobSerializer, BatchOptions batchOptions, ServiceLifetime lifetime = ServiceLifetime.Transient) 
+        where T : IHandler
+    {
+        _consumerRegistration.HandlerMapping[functionName] = (new HandlerOptions
+        {
+            Type = typeof(T),
+            Serializer = jobSerializer,
+            Batch = batchOptions,
+        }, lifetime);
+        return this;
+    }
+    
+    public ConsumerConfigurator SetBatchHandler<T>(string functionName, BatchOptions batchOptions, ServiceLifetime lifetime = ServiceLifetime.Transient) 
+        where T : IHandler
+    {
+        _consumerRegistration.HandlerMapping[functionName] = (new HandlerOptions
+        {
+            Type = typeof(T),
+            Batch = batchOptions,
+        }, lifetime);
+        return this;
+    }
+    
     public void SetPipeline(Action<ConsumerPipelineBuilder> builder)
     {
         builder(_consumerRegistration.PipelineBuilder);

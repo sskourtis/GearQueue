@@ -1,4 +1,5 @@
 using GearQueue.Consumer.Coordinators;
+using GearQueue.Consumer.Executor;
 using GearQueue.Consumer.Pipeline;
 using GearQueue.Logging;
 using GearQueue.Options;
@@ -26,25 +27,19 @@ public class Consumer(
                 throw new ApplicationException($"Handler {handlerOptions.Type.FullName} does not implement IGearQueueHandler");
             }
         }
-        
+
         var logger = loggerFactory.CreateLogger<Consumer>();
         
-        var coordinators = new List<AbstractHandlerExecutionCoordinator>();
+        var jobExecutors = new List<IJobExecutor>();
+        JobManager? globalManager = null;
 
-        if (options.Batch is not null)
+        if (options.ConcurrencyStrategy == ConcurrencyStrategy.AcrossServers &&
+            (options.Hosts.Count > 1 || options.MaxConcurrency > 1))
         {
-            if (options.ConcurrencyStrategy != ConcurrencyStrategy.AcrossServers)
-            {
-                throw new Exception("Invalid concurrency strategy for batch consumer");
-            }
+            var executor = new AsynchronousAbstractJobExecutor(options, consumerPipeline, loggerFactory);
+            jobExecutors.Add(executor);
             
-            coordinators.Add(
-                new BatchAbstractHandlerExecutionCoordinator(loggerFactory, consumerPipeline, options, handlers));
-        }
-        else if (options.ConcurrencyStrategy == ConcurrencyStrategy.AcrossServers)
-        {
-            coordinators.Add(
-                new AsynchronousAbstractHandlerExecutionCoordinator(consumerPipeline, handlers, options, loggerFactory));
+            globalManager = new JobManager(executor, loggerFactory, handlers);
         }
 
         var instances = options.Hosts
@@ -55,43 +50,46 @@ public class Consumer(
                     serverOptions.Connections, 
                     string.Join(',', handlers.Keys));
                 
-                AbstractHandlerExecutionCoordinator? sharedCoordinator = null;
+                JobManager? sharedJobManager = null;
 
                 switch (options.ConcurrencyStrategy)
                 {
-                    case ConcurrencyStrategy.AcrossServers:
+                    case ConcurrencyStrategy.AcrossServers when globalManager is not null:
                         // Use shared coordinator
-                        sharedCoordinator = coordinators.Single();
+                        sharedJobManager = globalManager;
                         break;
-                    case ConcurrencyStrategy.PerServer:
+                    case ConcurrencyStrategy.PerServer when serverOptions.Connections > 1:
                         // PerServer, all the connections to this server share the same coordinator
-                        sharedCoordinator = new AsynchronousAbstractHandlerExecutionCoordinator(consumerPipeline, handlers, options, loggerFactory);
-                        coordinators.Add(sharedCoordinator);
-                        break;
-                    case ConcurrencyStrategy.PerConnection:
-                        // leave it null and handle it per connection
+                        var executor = new AsynchronousAbstractJobExecutor(options, consumerPipeline, loggerFactory);
+                        jobExecutors.Add(executor);
+                        
+                        sharedJobManager = new JobManager(executor, loggerFactory, handlers);
                         break;
                     default:
-                        throw new ArgumentException("Unsupported concurrency strategy");
+                        // leave it null and handle it per connection
+                        break;
                 }
 
                 return Enumerable.Repeat(0, serverOptions.Connections)
                     .Select(_ =>
                     {
-                        var coordinator = sharedCoordinator;
+                        var jobManager = sharedJobManager;
 
-                        switch (coordinator)
+                        switch (jobManager)
                         {
                             case null when options.MaxConcurrency == 1:
-                                coordinator = new SynchronousAbstractHandlerExecutionCoordinator(consumerPipeline, handlers, loggerFactory);
+                                jobManager =  new JobManager(
+                                    new SynchronousJobExecutor(consumerPipeline, loggerFactory),
+                                    loggerFactory, handlers);
                                 break;
                             case null:
-                                coordinator = new AsynchronousAbstractHandlerExecutionCoordinator(consumerPipeline, handlers, options, loggerFactory);
-                                coordinators.Add(coordinator);
+                                var executor = new AsynchronousAbstractJobExecutor(options, consumerPipeline, loggerFactory);
+                                jobExecutors.Add(executor);
+                                jobManager =  new JobManager(executor, loggerFactory, handlers);
                                 break;
                         }
                         
-                        var connection = new ConsumerConnection(serverOptions, handlers.Keys, coordinator, loggerFactory);
+                        var connection = new ConsumerConnection(serverOptions, handlers.Keys, jobManager, loggerFactory);
 
                         connection.RegisterResultCallback();
                         
@@ -104,10 +102,10 @@ public class Consumer(
 
         await Task.WhenAll(instanceTasks).ConfigureAwait(false);
 
-        if (coordinators.Count != 0)
+        if (jobExecutors.Count != 0)
         {
             // Wait for all executions to complete
-            await Task.WhenAll(coordinators.Select(c => c.WaitAllExecutions()))
+            await Task.WhenAll(jobExecutors.Select(c => c.WaitAllExecutions()))
                 .ConfigureAwait(false);
         }
     }

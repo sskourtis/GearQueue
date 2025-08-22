@@ -14,11 +14,3 @@ services:
         ports:
             - "4732:4730"
     
-    worker_example:
-        build:
-            context: .
-            dockerfile: Samples/WorkerExample/Dockerfile
-        deploy:
-            resources:
-                limits:
-                    memory: 256M

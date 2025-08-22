@@ -13,7 +13,7 @@ internal class HandlerExecutionMiddleware(
     public async Task InvokeAsync(JobContext context, ConsumerDelegate? next = null)
     {
         using var provider = handlerProviderFactory.Create();
-
+        
         var handler = provider.Get(context.HandlerType!);
 
         if (handler is null)

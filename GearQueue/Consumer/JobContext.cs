@@ -9,7 +9,11 @@ public class JobContext
     private readonly IEnumerable<JobContext>? _batchContexts;
     private readonly JobAssign? _jobAssign;
     
+    internal int? ConnectionId { get; set; }
+    
     internal JobResult? Result { get; private set; }
+    
+    internal string JobHandle => _jobAssign!.JobHandle;
 
     public CancellationToken CancellationToken { get; init; }
 
@@ -34,19 +38,20 @@ public class JobContext
         return _serializer!.Deserialize<T>(Data);
     }
 
-    internal JobContext(JobAssign jobAssign, IGearQueueJobSerializer? serializer, CancellationToken cancellationToken)
+    internal JobContext(JobAssign jobAssign, IGearQueueJobSerializer? serializer, int? connectionId, CancellationToken cancellationToken)
     {;
         _serializer = serializer;
+        ConnectionId = connectionId;
         CancellationToken = cancellationToken;
         _jobAssign = jobAssign;
         FunctionName = jobAssign.FunctionName;
     }
     
-    internal JobContext(string functionName, IEnumerable<JobAssign> jobs, string? batchKey, IGearQueueJobSerializer? serializer, CancellationToken cancellationToken)
+    internal JobContext(string functionName, List<(int ConnectionId, JobAssign Job)> jobs, string? batchKey, IGearQueueJobSerializer? serializer, CancellationToken cancellationToken)
     {
         _serializer = serializer;
         CancellationToken = cancellationToken;
-        _batchContexts = jobs.Select(x => new JobContext(x, serializer, cancellationToken));
+        _batchContexts = jobs.Select(x => new JobContext(x.Job, serializer, x.ConnectionId, cancellationToken)).ToArray();
         FunctionName = functionName;
         BatchKey = batchKey;
     }

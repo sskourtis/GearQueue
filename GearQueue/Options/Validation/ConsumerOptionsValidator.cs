@@ -15,24 +15,6 @@ public class ConsumerOptionsValidator : IValidator<ConsumerOptions>
             return new ValidationResult(errors);
         }
 
-        if (options.Batch is not null)
-        {
-            if (options.Batch.Size <= 1)
-            {
-                errors.Add("Batch size must be greater than 1");
-            }
-
-            if (options.Batch.TimeLimit <= TimeSpan.Zero)
-            {
-                errors.Add("Batch time limit must be greater than zero");
-            }
-
-            if (options.ConcurrencyStrategy is not ConcurrencyStrategy.AcrossServers)
-            {
-                errors.Add("Concurrency strategy must be AcrossServers when batching is enabled");
-            }
-        }
-
         foreach (var servers in options.Hosts)
         {
             var serverValidationResult = serverValidator.Validate(servers.Host);

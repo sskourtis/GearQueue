@@ -9,6 +9,7 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace GearQueue.Consumer.Coordinators;
 
+/*
 internal class BatchAbstractHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
     ConsumerPipeline consumerPipeline,
@@ -166,7 +167,7 @@ internal class BatchAbstractHandlerExecutionCoordinator(
             }
             
             var context = new JobContext(batch.Function,
-                batch.Jobs.Select(j => j.Job), 
+                batch.Jobs, 
                 batch.Key, 
                 handlerOptions.Serializer, 
                 cancellationToken)
@@ -199,4 +200,4 @@ internal class BatchAbstractHandlerExecutionCoordinator(
     {
         _handlerSemaphore.Dispose();
     }
-}
+}*/

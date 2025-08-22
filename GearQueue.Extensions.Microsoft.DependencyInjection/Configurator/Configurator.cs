@@ -314,12 +314,6 @@ public class Configurator
             {
                 throw new ArgumentException("There must be at least one handler mapping");
             }
-
-            if (options.Batch is not null && registration.HandlerMapping.Count != 1)
-            {
-                throw new ArgumentException("Batch consumer must have exactly one handler");
-            }
-
            
             return new Consumer.Consumer(
                 options,

@@ -63,7 +63,7 @@ internal abstract class AbstractHandlerExecutionCoordinator(
                 return JobResult.PermanentFailure;
             }
             
-            var context = new JobContext(job, handlerOptions.Serializer, cancellationToken)
+            var context = new JobContext(job, handlerOptions.Serializer,  0, cancellationToken)
             {
                 HandlerType = handlerOptions.Type
             };

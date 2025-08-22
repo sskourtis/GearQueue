@@ -104,12 +104,6 @@ public static class ConnectionStringParser
                     TrySetPropertyValue(optionsHost.Host, option.Name ,option.Value);    
                 }
             }
-            else if (option.Name.StartsWith("Batch"))
-            {
-                options.Batch ??= new BatchOptions();
-                
-                TrySetPropertyValue(options.Batch, option.Name[5..] ,option.Value);
-            }
             else
             {
                 TrySetPropertyValue(options, option.Name, option.Value);

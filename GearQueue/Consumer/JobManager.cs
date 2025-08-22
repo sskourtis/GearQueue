@@ -1,4 +1,3 @@
-using GearQueue.Consumer.Coordinators;
 using GearQueue.Consumer.Executor;
 using GearQueue.Logging;
 using GearQueue.Protocol.Request;
@@ -45,15 +44,15 @@ internal class JobManager(
     {
         TimeSpan? nextTimeout = null;
         
-        if (_batchJobManagers.Length > 0)
+        /*if (_batchJobManagers.Length > 0)
         {
-            (var currentJobIsHandled, nextTimeout) = await ArrangeBatchManagers(connectionId, job, cancellationToken);
+            (var currentJobHandledInBatch, nextTimeout) = await ArrangeBatchManagers(connectionId, job, cancellationToken);
 
-            if (currentJobIsHandled)
+            if (currentJobHandledInBatch)
             {
                 return new ExecutionResult();
             }
-        }
+        }*/
         
         if (job is null)
         {
@@ -71,7 +70,7 @@ internal class JobManager(
         {
             HandlerType = handlerOptions.Type
         };
-
+        
         var result = await executor.Execute(jobContext, cancellationToken);
         
         return result ?? nextTimeout ?? new ExecutionResult();
@@ -84,18 +83,21 @@ internal class JobManager(
             
         foreach (var batchJobManager in _batchJobManagers)
         {
-            var (minimumNextTimeout, completedJobs) = batchJobManager.TryGetJobs(connectionId, job);
-            
-            nextTimeout = nextTimeout.HasValue && nextTimeout < minimumNextTimeout ? nextTimeout : minimumNextTimeout;
+            var (batchNextTimeout, readToRunBatchJobs) = batchJobManager.TryGetJobs(connectionId, job);
+
+            if (batchNextTimeout.HasValue)
+            {
+                nextTimeout = nextTimeout < batchNextTimeout ? nextTimeout : batchNextTimeout;    
+            }
 
             currentJobIsHandled = currentJobIsHandled || batchJobManager.FunctionName == job?.FunctionName;
 
-            if (completedJobs is null)
+            if (readToRunBatchJobs is null)
             {
                 continue;
             }                
                 
-            foreach (var context in completedJobs)
+            foreach (var context in readToRunBatchJobs)
             {
                 await executor.Execute(context, cancellationToken);
             }

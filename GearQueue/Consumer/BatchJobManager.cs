@@ -14,15 +14,15 @@ public class BatchJobManager(string functionName, HandlerOptions options)
     
     public (TimeSpan?, IEnumerable<JobContext>?) TryGetJobs(int connectionId, JobAssign? job)
     {
-        List<BatchData>? completedBatches;
-        TimeSpan? minimumNextTimeout; 
+        List<BatchData>? readyToRunBatches;
+        TimeSpan? nextTimeout; 
         
         lock (_pendingBatches)
         {
-            (minimumNextTimeout, completedBatches) = FindCompletedBatches(connectionId, job);
+            (nextTimeout, readyToRunBatches) = FindReadToRunBatches(connectionId, job);
         }
 
-        var jobContexts = completedBatches?.Select(
+        var jobContexts = readyToRunBatches?.Select(
             b =>
             {
                 var context = new JobContext(b.Function,
@@ -40,18 +40,18 @@ public class BatchJobManager(string functionName, HandlerOptions options)
                 return context;
             });
 
-        if (minimumNextTimeout is null)
+        if (nextTimeout is null)
         {
             // There are no pending batches, don't return custom timeout
             return (null, jobContexts);
         } 
 
-        return minimumNextTimeout >= options.Batch!.TimeLimit
+        return nextTimeout >= options.Batch!.TimeLimit
             ? (options.Batch!.TimeLimit, jobContexts)
-            : (minimumNextTimeout.Value, jobContexts);
+            : (nextTimeout.Value, jobContexts);
     }
 
-    private (TimeSpan?, List<BatchData>?) FindCompletedBatches(int connectionId, JobAssign? job)
+    private (TimeSpan?, List<BatchData>?) FindReadToRunBatches(int connectionId, JobAssign? job)
     {
         List<BatchData>? completedBatches = null;
         TimeSpan? minimumNextTimeout = null; 
@@ -61,6 +61,7 @@ public class BatchJobManager(string functionName, HandlerOptions options)
             var batch = _pendingBatches[i];
                 
             if (job is not null &&
+                job.FunctionName == FunctionName && 
                 (!options.Batch!.ByKey || batch.Key == job.BatchKey))
             {
                 batch.Jobs.Add((connectionId, job));

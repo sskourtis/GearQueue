@@ -1,4 +1,4 @@
-namespace GearQueue.Consumer.Coordinators;
+namespace GearQueue.Consumer.Executor;
 
 public readonly struct ExecutionResult
 {

@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using GearQueue.Consumer.Coordinators;
 using GearQueue.Logging;
 using GearQueue.Network;
 using GearQueue.Options;
@@ -67,7 +66,7 @@ internal class ConsumerConnection(
                     // Avoid using presleep if we have to wake up less than 200ms from now.
                     // This is because the "GetPacket" after presleep is not stable if the cancellation token is extremely short.
                     // The instability is that we won't read the response packets after presleep in the correct order.
-                    (executionResult.MaximumSleepDelay.HasValue && executionResult.MaximumSleepDelay <= TimeSpan.FromMilliseconds(1000)))
+                    (executionResult.MaximumSleepDelay.HasValue && executionResult.MaximumSleepDelay <= TimeSpan.FromMilliseconds(200)))
                 {
                     await Task.Delay(executionResult.MaximumSleepDelay.HasValue && executionResult.MaximumSleepDelay.Value < options.PollingDelay 
                             ? executionResult.MaximumSleepDelay.Value 
@@ -79,12 +78,6 @@ internal class ConsumerConnection(
                 await _connection.SendPacket(RequestFactory.PreSleep(), cancellationToken).ConfigureAwait(false);
                 
                 ResponsePacket? noopResponse;
-
-                if (executionResult.MaximumSleepDelay.HasValue &&
-                    executionResult.MaximumSleepDelay.Value < TimeSpan.FromMilliseconds(1000))
-                {
-                    _logger.LogWarning("Sleep for {Delay}", executionResult.MaximumSleepDelay.Value);;
-                }
 
                 if (executionResult.MaximumSleepDelay.HasValue)
                 {

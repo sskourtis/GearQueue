@@ -1,22 +1,22 @@
-using GearQueue.Consumer.Provider;
 using GearQueue.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Pipeline;
 
-internal class HandlerExecutionMiddleware(
-    ILoggerFactory loggerFactory,
-    IHandlerProviderFactory handlerProviderFactory) : IGearQueueMiddleware
+/// <summary>
+/// Final middleware that will execute the appropriate handler.
+/// 
+/// The Microsoft dependency injection extension library doesn't use the current file.
+/// It defines its own middlewares that create the new handler instance using the framework's tools.
+/// </summary>
+/// <param name="loggerFactory"></param>
+public class HandlerExecutionMiddleware(ILoggerFactory loggerFactory) : IGearQueueMiddleware
 {
     private readonly ILogger<HandlerExecutionMiddleware> _logger = loggerFactory.CreateLogger<HandlerExecutionMiddleware>();
     
     public async Task InvokeAsync(JobContext context, ConsumerDelegate? next = null)
     {
-        using var provider = handlerProviderFactory.Create();
-        
-        var handler = provider.Get(context.HandlerType!);
-
-        if (handler is null)
+        if (Activator.CreateInstance(context.HandlerType!) is not IHandler handler)
         {
             _logger.LogHandlerTypeCreationFailure(context.HandlerType!, context.FunctionName);
             context.SetResult(JobResult.PermanentFailure);

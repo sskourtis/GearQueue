@@ -1,8 +1,6 @@
 using GearQueue.Consumer.Pipeline;
-using GearQueue.Extensions.Microsoft.DependencyInjection.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
 
@@ -27,7 +25,7 @@ public class ConsumerPipelineBuilder(IServiceCollection serviceCollection)
         return Use(typeof(T));
     }
 
-    internal ConsumerPipeline Build(bool createScope, IServiceProvider serviceProvider)
+    internal ConsumerPipeline Build<TExecutionMiddleware>(IServiceProvider serviceProvider) where TExecutionMiddleware : class, IGearQueueMiddleware 
     {
         var middlewares = _middlewares
             .Select(m =>
@@ -41,11 +39,8 @@ public class ConsumerPipelineBuilder(IServiceCollection serviceCollection)
             })
             .ToList();
 
-        middlewares.Add(
-            new HandlerExecutionMiddleware(serviceProvider.GetRequiredService<ILoggerFactory>(),
-                new MicrosoftProviderFactory(createScope,
-                    serviceProvider.GetRequiredService<IServiceProvider>())
-            ));
+        // Add the final middleware, this is the one that will execute the handler.
+        middlewares.Add(serviceProvider.GetRequiredService<TExecutionMiddleware>());
         
         return new ConsumerPipeline(middlewares.ToArray());
     }

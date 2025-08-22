@@ -101,9 +101,12 @@ app.MapGet("/produce-batch", async (IProducer producer, JobCounter counter, [Fro
 
 app.MapGet("/produce-random", async (IProducer producer, JobCounter counter) =>
     {
-        var result = await producer.Produce(Random.Shared.Next(10) > 5 
-            ? "test-function"
-            : "test-secondary-function", Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}"));
+        var result = await producer.Produce(Random.Shared.Next(0, 3) switch
+        {
+            0 => "test-function",
+            1 => "test-function-2",
+            _ => "test-batch-function",
+        }, new JobContract { TestValue = $"Test {Guid.NewGuid():N}" });
 
         if (result)
         {

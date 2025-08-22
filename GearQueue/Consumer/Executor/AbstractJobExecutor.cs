@@ -28,7 +28,7 @@ internal abstract class AbstractJobExecutor(ILoggerFactory loggerFactory) : IJob
         {
             foreach (var batch in context.Batches)
             {
-                if (JobResultCallback!.TryGetValue(batch.ConnectionId!.Value, out var batchCallback))
+                if (JobResultCallback.TryGetValue(batch.ConnectionId!.Value, out var batchCallback))
                 {
                     await batchCallback.Invoke(batch.JobHandle, result).ConfigureAwait(false);
                 }
@@ -37,7 +37,7 @@ internal abstract class AbstractJobExecutor(ILoggerFactory loggerFactory) : IJob
             return;
         }
         
-        if (JobResultCallback!.TryGetValue(context.ConnectionId!.Value, out var callback))
+        if (JobResultCallback.TryGetValue(context.ConnectionId!.Value, out var callback))
         {
             await callback.Invoke(context.JobHandle, result).ConfigureAwait(false);
         }

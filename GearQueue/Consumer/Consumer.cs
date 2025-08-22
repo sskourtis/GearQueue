@@ -1,4 +1,3 @@
-using GearQueue.Consumer.Coordinators;
 using GearQueue.Consumer.Executor;
 using GearQueue.Consumer.Pipeline;
 using GearQueue.Logging;
@@ -36,6 +35,7 @@ public class Consumer(
         if (options.ConcurrencyStrategy == ConcurrencyStrategy.AcrossServers &&
             (options.Hosts.Count > 1 || options.MaxConcurrency > 1))
         {
+            logger.LogInformation("Using shared job manager with asynchronous job executor");
             var executor = new AsynchronousAbstractJobExecutor(options, consumerPipeline, loggerFactory);
             jobExecutors.Add(executor);
             
@@ -64,6 +64,10 @@ public class Consumer(
                         jobExecutors.Add(executor);
                         
                         sharedJobManager = new JobManager(executor, loggerFactory, handlers);
+                        
+                        logger.LogInformation("Using shared job manager for {Host}:{Port} with asynchronous job executor", 
+                            serverOptions.Host.Hostname, 
+                            serverOptions.Host.Port);;
                         break;
                     default:
                         // leave it null and handle it per connection
@@ -71,18 +75,26 @@ public class Consumer(
                 }
 
                 return Enumerable.Repeat(0, serverOptions.Connections)
-                    .Select(_ =>
+                    .Select(index =>
                     {
                         var jobManager = sharedJobManager;
 
                         switch (jobManager)
                         {
                             case null when options.MaxConcurrency == 1:
+                                logger.LogInformation("Using dedicated job manager for {ConnectionNumber} of {Host}:{Port} with synchronous job executor",
+                                    index,
+                                    serverOptions.Host.Hostname, 
+                                    serverOptions.Host.Port);
                                 jobManager =  new JobManager(
                                     new SynchronousJobExecutor(consumerPipeline, loggerFactory),
                                     loggerFactory, handlers);
                                 break;
                             case null:
+                                logger.LogInformation("Using dedicated job manager for {ConnectionNumber} of {Host}:{Port} with asynchronous job executor",
+                                    index,
+                                    serverOptions.Host.Hostname, 
+                                    serverOptions.Host.Port);
                                 var executor = new AsynchronousAbstractJobExecutor(options, consumerPipeline, loggerFactory);
                                 jobExecutors.Add(executor);
                                 jobManager =  new JobManager(executor, loggerFactory, handlers);

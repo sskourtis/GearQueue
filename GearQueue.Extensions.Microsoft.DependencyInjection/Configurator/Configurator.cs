@@ -1,6 +1,6 @@
 using System.Reflection;
 using GearQueue.Consumer;
-using GearQueue.Extensions.Microsoft.DependencyInjection.Providers;
+using GearQueue.Extensions.Microsoft.DependencyInjection.Middlewares;
 using GearQueue.Options;
 using GearQueue.Options.Parser;
 using GearQueue.Options.Validation;
@@ -39,9 +39,9 @@ public class Configurator
 
         if (_consumerRegistrations.Count > 0)
         {
-            _services.TryAddSingleton<MicrosoftProvider>();
-            _services.TryAddTransient<MicrosoftScopedProvider>();
             _services.AddHostedService<GearQueueHostedService>();
+            _services.TryAddSingleton<ScopedHandlerExecutionMiddleware>();
+            _services.TryAddSingleton<UnscopedHandlerExecutionMiddleware>();
         }
     }
 
@@ -317,7 +317,9 @@ public class Configurator
            
             return new Consumer.Consumer(
                 options,
-                registration.PipelineBuilder.Build(options.CreateScope, s),
+                options.CreateScope 
+                    ? registration.PipelineBuilder.Build<ScopedHandlerExecutionMiddleware>(s)
+                    : registration.PipelineBuilder.Build<UnscopedHandlerExecutionMiddleware>(s),
                 registration.HandlerMapping.ToDictionary(x => x.Key, x =>
                 {
                     x.Value.Item1.Serializer ??= _defaultSerializer;

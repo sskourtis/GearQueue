@@ -1,11 +1,10 @@
 using GearQueue.Consumer;
 using GearQueue.Consumer.Pipeline;
 using SampleUtils;
-using WorkerExample.Handlers;
 
 namespace WorkerExample.Middlewares;
 
-public class ThroughputTrackingMiddleware(ILogger<ExampleHandler> logger): IGearQueueMiddleware
+public class ThroughputTrackingMiddleware(ILogger<ThroughputTrackingMiddleware> logger): IGearQueueMiddleware
 {
     private static readonly InvocationsTracker InvocationsTracker = new();
     

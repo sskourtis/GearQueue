@@ -47,7 +47,7 @@ internal class AsynchronousAbstractJobExecutor(
         finally
         {
             taskCompletionSource.SetResult(true);
-            ActiveJobs!.Remove(executionId, out _);
+            ActiveJobs.Remove(executionId, out _);
             _handlerSemaphore.Release();
         }
     }

@@ -6,7 +6,7 @@ public static class ConnectionStringParser
 {
     private const string HostsPropertyName = "Hosts";
     
-    private static readonly string[] ConsumerHostProperties = typeof(GearQueueConsumerHostsOptions)
+    private static readonly string[] ConsumerHostProperties = typeof(ConsumerHostsOptions)
         .GetProperties()
         .Where(p => p.Name != "Host")
         .Select(p => p.Name)
@@ -18,17 +18,17 @@ public static class ConnectionStringParser
         .Select(p => p.Name)
         .ToArray();
 
-    private static readonly string[] HostProperties = typeof(GearQueueHostOptions)
+    private static readonly string[] HostProperties = typeof(HostOptions)
         .GetProperties()
         .Where(p => p.Name != "Hostname" || p.Name != "Port")
         .Select(p => p.Name)
         .ToArray();
 
-    public static GearQueueProducerOptions ParseToProducerOptions(string connectionString)
+    public static ProducerOptions ParseToProducerOptions(string connectionString)
     {
         var configOptions = GetConfiguration(connectionString);
 
-        var options = new GearQueueProducerOptions();
+        var options = new ProducerOptions();
 
         foreach (var option in configOptions)
         {
@@ -60,7 +60,7 @@ public static class ConnectionStringParser
             }
         }
 
-        var validator = new GearQueueProducerOptionsValidator();
+        var validator = new ProducerOptionsValidator();
         
         var result = validator.Validate(options);
         
@@ -74,18 +74,18 @@ public static class ConnectionStringParser
     /// </summary>
     /// <param name="connectionString"></param>
     /// <returns></returns>
-    public static GearQueueConsumerOptions ParseToConsumerOptions(string connectionString)
+    public static ConsumerOptions ParseToConsumerOptions(string connectionString)
     {
         var configOptions = GetConfiguration(connectionString);
 
-        var options = new GearQueueConsumerOptions();
+        var options = new ConsumerOptions();
 
         foreach (var option in configOptions)
         {
             if (option!.Name == HostsPropertyName)
             {
                 options.Hosts = ParseHosts(option.Value)
-                    .Select(h => new GearQueueConsumerHostsOptions
+                    .Select(h => new ConsumerHostsOptions
                     {
                         Host = h
                     }).ToList();
@@ -116,7 +116,7 @@ public static class ConnectionStringParser
             }
         }
 
-        var validator = new GearQueueConsumerOptionsValidator();
+        var validator = new ConsumerOptionsValidator();
         
         var result = validator.Validate(options);
         
@@ -125,13 +125,13 @@ public static class ConnectionStringParser
         return options;
     }
 
-    private static IEnumerable<GearQueueHostOptions> ParseHosts(string hostsString)
+    private static IEnumerable<HostOptions> ParseHosts(string hostsString)
     {
         return hostsString
             .Split(',')
             .Select(s => s.Trim())
             .Select(s => s.Split(':'))
-            .Select(s => new GearQueueHostOptions
+            .Select(s => new HostOptions
             {
                 Hostname = s[0],
                 Port = s.Length > 1 

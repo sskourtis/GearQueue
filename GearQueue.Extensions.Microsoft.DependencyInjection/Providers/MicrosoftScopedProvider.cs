@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Providers;
 
-public class GearQueueMicrosoftScopedProvider(IServiceScopeFactory scopeFactory) : IGearQueueHandlerProvider
+public class MicrosoftScopedProvider(IServiceScopeFactory scopeFactory) : IHandlerProvider
 {
     private readonly IServiceScope _serviceScope = scopeFactory.CreateScope();
     

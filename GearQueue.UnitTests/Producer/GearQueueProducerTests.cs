@@ -1,6 +1,6 @@
 namespace GearQueue.UnitTests.Producer;
 
-public class GearQueueProducerTests
+public class ProducerTests
 {
     // TODO
 }

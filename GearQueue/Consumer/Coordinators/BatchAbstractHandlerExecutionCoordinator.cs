@@ -12,7 +12,7 @@ namespace GearQueue.Consumer.Coordinators;
 internal class BatchAbstractHandlerExecutionCoordinator(
     ILoggerFactory loggerFactory,
     ConsumerPipeline consumerPipeline,
-    GearQueueConsumerOptions options,
+    ConsumerOptions options,
     Dictionary<string, HandlerOptions> handlers) 
     : AbstractHandlerExecutionCoordinator( 
         loggerFactory,
@@ -21,7 +21,7 @@ internal class BatchAbstractHandlerExecutionCoordinator(
         new Dictionary<int, Func<string, JobResult, Task>>(), 
         new ConcurrentDictionary<Guid, TaskCompletionSource<bool>>())
 {
-    private readonly ILogger<IGearQueueConsumer> _logger = loggerFactory.CreateLogger<IGearQueueConsumer>();
+    private readonly ILogger<IConsumer> _logger = loggerFactory.CreateLogger<IConsumer>();
     private readonly ObjectPool<BatchData> _batchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
     private readonly List<BatchData> _pendingBatches = [];
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);

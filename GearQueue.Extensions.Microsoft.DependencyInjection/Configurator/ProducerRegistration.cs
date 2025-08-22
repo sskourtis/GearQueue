@@ -10,6 +10,6 @@ public class ProducerRegistration
     public IConfigurationSection? Section { get; set; }
     
     public string? ConnectionString { get; set; }
-    public Action<GearQueueProducerOptions>? ConfigureOptions { get; set; }
-    public IGearQueueSerializer? Serializer { get; init; }
+    public Action<ProducerOptions>? ConfigureOptions { get; set; }
+    public IGearQueueJobSerializer? Serializer { get; init; }
 }

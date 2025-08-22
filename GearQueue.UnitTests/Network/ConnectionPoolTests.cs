@@ -24,7 +24,7 @@ public class ConnectionPoolTests
         _timeProvider = Substitute.For<ITimeProvider>();
         _timeProvider.Now.Returns(_baseTime);
         
-        var gearmanServerOptions = new GearQueueHostOptions
+        var gearmanServerOptions = new HostOptions
         {
             Hostname = "test-host",
             Port = 8080

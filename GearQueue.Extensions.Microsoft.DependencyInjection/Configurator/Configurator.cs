@@ -11,20 +11,21 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ProducerOptions = GearQueue.Options.ProducerOptions;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
 
-public class GearQueueConfigurator
+public class Configurator
 {
-    private IGearQueueSerializer? _defaultSerializer;
+    private IGearQueueJobSerializer? _defaultSerializer;
     private readonly IServiceCollection _services;
 
-    private Action<GearQueueProducerOptions>? _defaultProducerOptions;
-    private Action<GearQueueConsumerOptions>? _defaultConsumerOptions;
+    private Action<ProducerOptions>? _defaultProducerOptions;
+    private Action<ConsumerOptions>? _defaultConsumerOptions;
     
     private readonly List<ConsumerRegistration> _consumerRegistrations = new();
     
-    internal GearQueueConfigurator(IServiceCollection services)
+    internal Configurator(IServiceCollection services)
     {
         _services = services;
     }
@@ -38,33 +39,33 @@ public class GearQueueConfigurator
 
         if (_consumerRegistrations.Count > 0)
         {
-            _services.TryAddSingleton<GearQueueMicrosoftProvider>();
-            _services.TryAddTransient<GearQueueMicrosoftScopedProvider>();
+            _services.TryAddSingleton<MicrosoftProvider>();
+            _services.TryAddTransient<MicrosoftScopedProvider>();
             _services.AddHostedService<GearQueueHostedService>();
         }
     }
 
-    public void SetDefaultSerializer(IGearQueueSerializer serializer)
+    public void SetDefaultSerializer(IGearQueueJobSerializer jobSerializer)
     {
-        _defaultSerializer = serializer; 
+        _defaultSerializer = jobSerializer; 
     }
 
-    public void SetDefaultProducerOptions(Action<GearQueueProducerOptions> options)
+    public void SetDefaultProducerOptions(Action<ProducerOptions> options)
     {
         _defaultProducerOptions = options;
     }
 
-    public void SetDefaultConsumerOptions(Action<GearQueueConsumerOptions> options)
+    public void SetDefaultConsumerOptions(Action<ConsumerOptions> options)
     {
         _defaultConsumerOptions = options;
     }
 
-    public void AddProducer(string connectionString, Action<GearQueueProducerOptions>? configure = null, IGearQueueSerializer? serializer = null)
+    public void AddProducer(string connectionString, Action<ProducerOptions>? configure = null, IGearQueueJobSerializer? serializer = null)
     {
         AddNamedProducer("default", connectionString, configure, serializer);
     }
     
-    public void AddNamedProducer(string name, string connectionString, Action<GearQueueProducerOptions>? configure = null, IGearQueueSerializer? serializer = null)
+    public void AddNamedProducer(string name, string connectionString, Action<ProducerOptions>? configure = null, IGearQueueJobSerializer? serializer = null)
     {
         AddProducer(new ProducerRegistration
         {
@@ -75,12 +76,12 @@ public class GearQueueConfigurator
         });
     }
     
-    public void AddProducer(IConfigurationSection section, Action<GearQueueProducerOptions>? configure = null, IGearQueueSerializer? serializer = null)
+    public void AddProducer(IConfigurationSection section, Action<ProducerOptions>? configure = null, IGearQueueJobSerializer? serializer = null)
     {
         AddNamedProducer("default", section, configure, serializer);
     }
     
-    public void AddNamedProducer(string name, IConfigurationSection section, Action<GearQueueProducerOptions>? configure = null, IGearQueueSerializer? serializer = null)
+    public void AddNamedProducer(string name, IConfigurationSection section, Action<ProducerOptions>? configure = null, IGearQueueJobSerializer? serializer = null)
     {
         AddProducer(new ProducerRegistration
         {
@@ -91,12 +92,12 @@ public class GearQueueConfigurator
         });
     }
     
-    public void AddProducer(Action<GearQueueProducerOptions> configure, IGearQueueSerializer? serializer = null)
+    public void AddProducer(Action<ProducerOptions> configure, IGearQueueJobSerializer? serializer = null)
     {
         AddNameProducer("default", configure, serializer);
     }
 
-    public void AddNameProducer(string name, Action<GearQueueProducerOptions> configure, IGearQueueSerializer? serializer = null)
+    public void AddNameProducer(string name, Action<ProducerOptions> configure, IGearQueueJobSerializer? serializer = null)
     {
         AddProducer(new ProducerRegistration
         {
@@ -110,16 +111,16 @@ public class GearQueueConfigurator
     {
         if (registration.Section is not null)
         {
-            _services.Configure<GearQueueProducerOptions>(registration.Name, registration.Section);
+            _services.Configure<ProducerOptions>(registration.Name, registration.Section);
         }
 
         var creator = (IServiceProvider s) =>
         {
-            GearQueueProducerOptions options;
+            ProducerOptions options;
 
             if (registration.Section is not null)
             {
-                var optionsMonitor = s.GetRequiredService<IOptionsMonitor<GearQueueProducerOptions>>();
+                var optionsMonitor = s.GetRequiredService<IOptionsMonitor<ProducerOptions>>();
 
                 options = optionsMonitor.Get(registration.Name);
             }
@@ -129,17 +130,17 @@ public class GearQueueConfigurator
             }
             else
             {
-                options = new GearQueueProducerOptions();
+                options = new ProducerOptions();
             }
             
             _defaultProducerOptions?.Invoke(options);
             registration.ConfigureOptions?.Invoke(options);
             
-            new GearQueueProducerOptionsValidator()
+            new ProducerOptionsValidator()
                 .Validate(options)
                 .ThrowIfInvalid();
             
-            var instance = new GearQueueProducer(options, registration.Serializer ?? _defaultSerializer, s.GetRequiredService<ILoggerFactory>())
+            var instance = new Producer.Producer(options, registration.Serializer ?? _defaultSerializer, s.GetRequiredService<ILoggerFactory>())
             {
                 Name = registration.Name,
             };
@@ -149,16 +150,16 @@ public class GearQueueConfigurator
 
         if (registration.Name == "default")
         {
-            _services.AddSingleton<IGearQueueProducer>(creator);    
+            _services.AddSingleton<IProducer>(creator);    
         }
         else
         {
-            _services.TryAddSingleton<IGearQueueProducerFactory, GearQueueProducerFactory>();
-            _services.AddSingleton<INamedGearQueueProducer>(creator);
+            _services.TryAddSingleton<IProducerFactory, ProducerFactory>();
+            _services.AddSingleton<INamedProducer>(creator);
         }
     }
     
-    public void RegisterTypedProducerFromAssembly(Assembly assembly, IGearQueueSerializer? serializer = null)
+    public void RegisterTypedProducerFromAssembly(Assembly assembly, IGearQueueJobSerializer? serializer = null)
     {
         var foundTypes = assembly.GetTypes()
             .Select(t => new
@@ -170,40 +171,40 @@ public class GearQueueConfigurator
 
         foreach (var typeInfo in foundTypes)
         {
-            var serviceType = typeof(IGearQueueProducer<>).MakeGenericType(typeInfo.Type);
+            var serviceType = typeof(IProducer<>).MakeGenericType(typeInfo.Type);
         
-            var implementationType = typeof(GearQueueProducer<>).MakeGenericType(typeInfo.Type);
+            var implementationType = typeof(Producer<>).MakeGenericType(typeInfo.Type);
         
             _services.TryAddSingleton(serviceType, s =>
             {
-                var baseProducer = s.GetRequiredService<IGearQueueProducer>();
+                var baseProducer = s.GetRequiredService<IProducer>();
                 return Activator.CreateInstance(implementationType, typeInfo.Function, serializer ?? _defaultSerializer, baseProducer)!;
             });
         }
     }
 
-    public void RegisterTypedProducer<TJob>(string functionName, IGearQueueSerializer? serializer = null)
+    public void RegisterTypedProducer<TJob>(string functionName, IGearQueueJobSerializer? serializer = null)
     {
-        _services.TryAddSingleton<IGearQueueProducer<TJob>>(
-            s => new GearQueueProducer<TJob>(functionName,
+        _services.TryAddSingleton<IProducer<TJob>>(
+            s => new Producer<TJob>(functionName,
                 (serializer ?? _defaultSerializer)!,
-                s.GetRequiredService<IGearQueueProducer>()));
+                s.GetRequiredService<IProducer>()));
     }
     
-    public void RegisterTypedProducer<TJob>(string functionName, string producerName, IGearQueueSerializer? serializer = null)
+    public void RegisterTypedProducer<TJob>(string functionName, string producerName, IGearQueueJobSerializer? serializer = null)
     {
-        _services.TryAddSingleton<IGearQueueProducer<TJob>>(
+        _services.TryAddSingleton<IProducer<TJob>>(
             s =>
             {
-                var producerFactory = s.GetRequiredService<IGearQueueProducerFactory>();
+                var producerFactory = s.GetRequiredService<IProducerFactory>();
                 
-                return new GearQueueProducer<TJob>(functionName,
+                return new Producer<TJob>(functionName,
                     (serializer ?? _defaultSerializer)!,
                     producerFactory.GetRequired(producerName));
             });
     }
     
-    public void RegisterTypedProducerFromAssembly(Assembly assembly, string producerName, IGearQueueSerializer? serializer = null)
+    public void RegisterTypedProducerFromAssembly(Assembly assembly, string producerName, IGearQueueJobSerializer? serializer = null)
     {
         var foundTypes = assembly.GetTypes()
             .Select(t => new
@@ -215,20 +216,20 @@ public class GearQueueConfigurator
 
         foreach (var typeInfo in foundTypes)
         {
-            var serviceType = typeof(IGearQueueProducer<>).MakeGenericType(typeInfo.Type);
+            var serviceType = typeof(IProducer<>).MakeGenericType(typeInfo.Type);
         
-            var implementationType = typeof(GearQueueProducer<>).MakeGenericType(typeInfo.Type);
+            var implementationType = typeof(Producer<>).MakeGenericType(typeInfo.Type);
         
             _services.TryAddSingleton(serviceType, s =>
             {
-                var producerFactory = s.GetRequiredService<IGearQueueProducerFactory>();
+                var producerFactory = s.GetRequiredService<IProducerFactory>();
                 
                 return Activator.CreateInstance(implementationType, typeInfo.Function, serializer ?? _defaultSerializer, producerFactory.GetRequired(producerName))!;
             });
         }
     }
 
-    public GearQueueConsumerConfigurator AddConsumer(Action<GearQueueConsumerOptions> configure)
+    public ConsumerConfigurator AddConsumer(Action<ConsumerOptions> configure)
     {
         var registration = new ConsumerRegistration
         {
@@ -238,10 +239,10 @@ public class GearQueueConfigurator
         
         _consumerRegistrations.Add(registration);
         
-        return new GearQueueConsumerConfigurator(registration);
+        return new ConsumerConfigurator(registration);
     }
 
-    public GearQueueConsumerConfigurator AddConsumer(IConfigurationSection section, Action<GearQueueConsumerOptions>? configure = null)
+    public ConsumerConfigurator AddConsumer(IConfigurationSection section, Action<ConsumerOptions>? configure = null)
     {
         var registration = new ConsumerRegistration
         {
@@ -252,10 +253,10 @@ public class GearQueueConfigurator
         
         _consumerRegistrations.Add(registration);
         
-        return new GearQueueConsumerConfigurator(registration);
+        return new ConsumerConfigurator(registration);
     }
     
-    public GearQueueConsumerConfigurator AddConsumer(string? connectionString, Action<GearQueueConsumerOptions>? configure = null)
+    public ConsumerConfigurator AddConsumer(string? connectionString, Action<ConsumerOptions>? configure = null)
     {
         var registration = new ConsumerRegistration
         {
@@ -266,7 +267,7 @@ public class GearQueueConfigurator
         
         _consumerRegistrations.Add(registration);
         
-        return new GearQueueConsumerConfigurator(registration);
+        return new ConsumerConfigurator(registration);
     }
     
     private void AddConsumer(ConsumerRegistration registration)
@@ -280,16 +281,16 @@ public class GearQueueConfigurator
 
         if (registration.Section is not null)
         {
-            _services.Configure<GearQueueConsumerOptions>(uniqueName, registration.Section);    
+            _services.Configure<ConsumerOptions>(uniqueName, registration.Section);    
         }
         
-        _services.AddSingleton<IGearQueueConsumer>(s =>
+        _services.AddSingleton<IConsumer>(s =>
         {
-            GearQueueConsumerOptions options;
+            ConsumerOptions options;
 
             if (registration.Section is not null)
             {
-                var optionsMonitor = s.GetRequiredService<IOptionsMonitor<GearQueueConsumerOptions>>();
+                var optionsMonitor = s.GetRequiredService<IOptionsMonitor<ConsumerOptions>>();
 
                 options = optionsMonitor.Get(uniqueName);    
             }
@@ -299,13 +300,13 @@ public class GearQueueConfigurator
             }
             else
             {
-                options = new GearQueueConsumerOptions();
+                options = new ConsumerOptions();
             }
             
             _defaultConsumerOptions?.Invoke(options);
             registration.ConfigureOptions?.Invoke(options);
             
-            new GearQueueConsumerOptionsValidator()
+            new ConsumerOptionsValidator()
                 .Validate(options)
                 .ThrowIfInvalid();
             
@@ -320,7 +321,7 @@ public class GearQueueConfigurator
             }
 
            
-            return new GearQueueConsumer(
+            return new Consumer.Consumer(
                 options,
                 registration.PipelineBuilder.Build(options.CreateScope, s),
                 registration.HandlerMapping.ToDictionary(x => x.Key, x =>

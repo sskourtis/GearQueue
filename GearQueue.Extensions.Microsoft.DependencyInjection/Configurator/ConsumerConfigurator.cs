@@ -4,27 +4,27 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
 
-public class GearQueueConsumerConfigurator
+public class ConsumerConfigurator
 {
     private readonly ConsumerRegistration _consumerRegistration;
     
-    internal GearQueueConsumerConfigurator(ConsumerRegistration consumerRegistration)
+    internal ConsumerConfigurator(ConsumerRegistration consumerRegistration)
     {
         _consumerRegistration = consumerRegistration;
     }
 
-    public GearQueueConsumerConfigurator SetHandler<T>(string functionName, IGearQueueSerializer serializer, ServiceLifetime lifetime = ServiceLifetime.Transient) 
+    public ConsumerConfigurator SetHandler<T>(string functionName, IGearQueueJobSerializer jobSerializer, ServiceLifetime lifetime = ServiceLifetime.Transient) 
         where T : IHandler
     {
         _consumerRegistration.HandlerMapping[functionName] = (new HandlerOptions
         {
             Type = typeof(T),
-            Serializer = serializer
+            Serializer = jobSerializer
         }, lifetime);
         return this;
     }
     
-    public GearQueueConsumerConfigurator SetHandler<T>(string functionName, ServiceLifetime lifetime = ServiceLifetime.Transient) 
+    public ConsumerConfigurator SetHandler<T>(string functionName, ServiceLifetime lifetime = ServiceLifetime.Transient) 
         where T : IHandler
     {
         _consumerRegistration.HandlerMapping[functionName] = (new HandlerOptions

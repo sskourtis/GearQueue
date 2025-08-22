@@ -14,7 +14,7 @@ internal abstract class AbstractHandlerExecutionCoordinator(
     Dictionary<int, Func<string, JobResult, Task>>? jobResultCallback,
     ConcurrentDictionary<Guid, TaskCompletionSource<bool>>? activeJobs)
 {
-    private readonly ILogger _logger = loggerFactory.CreateLogger<GearQueueConsumer>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<Consumer>();
     
     protected readonly Dictionary<int, Func<string, JobResult, Task>>? JobResultCallback = jobResultCallback;
     protected readonly ConcurrentDictionary<Guid, TaskCompletionSource<bool>>? ActiveJobs = activeJobs;

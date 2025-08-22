@@ -9,7 +9,7 @@ namespace GearQueue.Consumer.Coordinators;
 internal class AsynchronousAbstractHandlerExecutionCoordinator(
     ConsumerPipeline consumerPipeline,
     Dictionary<string, HandlerOptions> handlers,
-    GearQueueConsumerOptions options,
+    ConsumerOptions options,
     ILoggerFactory loggerFactory) 
     : AbstractHandlerExecutionCoordinator(
         loggerFactory,

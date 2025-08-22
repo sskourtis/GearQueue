@@ -1,8 +1,8 @@
 namespace GearQueue.Options.Validation;
 
-public class GearQueueHostOptionsValidator
+public class HostOptionsValidator
 {
-    public ValidationResult Validate(GearQueueHostOptions options)
+    public ValidationResult Validate(HostOptions options)
     {
         var errors = new List<string>();
         

@@ -6,7 +6,7 @@ namespace GearQueue.Consumer.Pipeline;
 
 internal class HandlerExecutionMiddleware(
     ILoggerFactory loggerFactory,
-    IGearQueueHandlerProviderFactory handlerProviderFactory) : IGearQueueMiddleware
+    IHandlerProviderFactory handlerProviderFactory) : IGearQueueMiddleware
 {
     private readonly ILogger<HandlerExecutionMiddleware> _logger = loggerFactory.CreateLogger<HandlerExecutionMiddleware>();
     

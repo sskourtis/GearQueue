@@ -6,7 +6,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddGearQueue(g =>
 {
-    g.SetDefaultSerializer(new GearQueueJsonSerializer());
+    g.SetDefaultSerializer(new GearQueueJobJsonSerializer());
     
     g.AddConsumer(builder.Configuration.GetConnectionString("Consumer"))
         .SetHandler<ExampleHandler>("test-function", ServiceLifetime.Singleton)

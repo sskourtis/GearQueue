@@ -33,11 +33,11 @@ internal class Connection : IDisposable, IConnection
     private Socket? _socket;
     private bool _disposed;
     
-    private readonly GearQueueHostOptions _options;
+    private readonly HostOptions _options;
     
-    internal GearQueueHostOptions Options => _options;
+    internal HostOptions Options => _options;
     
-    public Connection(ILoggerFactory loggerFactory, GearQueueHostOptions options)
+    public Connection(ILoggerFactory loggerFactory, HostOptions options)
     {
         _logger = loggerFactory.CreateLogger<Connection>();
         Id = Interlocked.Increment(ref _nextId);

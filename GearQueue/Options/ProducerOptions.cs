@@ -1,6 +1,6 @@
 namespace GearQueue.Options;
 
-public class GearQueueProducerOptions
+public class ProducerOptions
 {
     /// <summary>
     /// Connection pool options. For each gearman job server, the library will manage a separate connection pool

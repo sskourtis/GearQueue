@@ -10,12 +10,12 @@ using TimeProvider = GearQueue.Utils.TimeProvider;
 
 namespace GearQueue.Producer;
 
-public interface INamedGearQueueProducer : IGearQueueProducer
+public interface INamedProducer : IProducer
 {
     string Name { get; init; }
 }
 
-public interface IGearQueueProducer
+public interface IProducer
 {
     /// <summary>
     /// Create a new gearman job for the given function with the given job data.
@@ -57,15 +57,15 @@ public interface IGearQueueProducer
     Task<bool> Produce<T>(string functionName, T job, ProducerOptions options, CancellationToken cancellationToken = default);
 }
 
-public class GearQueueProducer : IDisposable, INamedGearQueueProducer
+public class Producer : IDisposable, INamedProducer
 {
     private static readonly ProducerOptions DefaultOptions = new();
     
     private bool _disposed;
     private readonly ILogger _logger;
-    private readonly GearQueueProducerOptions _options;
+    private readonly Options.ProducerOptions _options;
     private readonly IConnectionPool[] _connectionPools;
-    private readonly IGearQueueSerializer? _serializer;
+    private readonly IGearQueueJobSerializer? _jobSerializer;
     
     private int _distributionStrategyCounter;
 
@@ -73,39 +73,39 @@ public class GearQueueProducer : IDisposable, INamedGearQueueProducer
     
     public required string Name { get; init; }
 
-    public GearQueueProducer(GearQueueProducerOptions options, ILoggerFactory loggerFactory)
+    public Producer(Options.ProducerOptions options, ILoggerFactory loggerFactory)
     {
-        _logger = loggerFactory.CreateLogger<GearQueueProducer>();
+        _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
         _connectionPools = options.ConnectionPools
             .Select(x => new ConnectionPool(x, loggerFactory, new ConnectionFactory(), new TimeProvider()))
             .ToArray<IConnectionPool>();
     }
     
-    public GearQueueProducer(GearQueueProducerOptions options, IGearQueueSerializer? serializer, ILoggerFactory loggerFactory)
+    public Producer(Options.ProducerOptions options, IGearQueueJobSerializer? jobSerializer, ILoggerFactory loggerFactory)
     {
-        _logger = loggerFactory.CreateLogger<GearQueueProducer>();
+        _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
-        _serializer = serializer;
+        _jobSerializer = jobSerializer;
         _connectionPools = options.ConnectionPools
             .Select(x => new ConnectionPool(x, loggerFactory, new ConnectionFactory(), new TimeProvider()))
             .ToArray<IConnectionPool>();
     }
     
-    internal GearQueueProducer(GearQueueProducerOptions options, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
+    internal Producer(Options.ProducerOptions options, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
     {
-        _logger = loggerFactory.CreateLogger<GearQueueProducer>();
+        _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
         _connectionPools = options.ConnectionPools
             .Select(connectionPoolFactory.Create)
             .ToArray();
     }
 
-    internal GearQueueProducer(GearQueueProducerOptions options, IGearQueueSerializer serializer, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
+    internal Producer(Options.ProducerOptions options, IGearQueueJobSerializer jobSerializer, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
     {
-        _logger = loggerFactory.CreateLogger<GearQueueProducer>();
+        _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
-        _serializer = serializer;
+        _jobSerializer = jobSerializer;
         _connectionPools = options.ConnectionPools
             .Select(connectionPoolFactory.Create)
             .ToArray();
@@ -133,16 +133,16 @@ public class GearQueueProducer : IDisposable, INamedGearQueueProducer
 
     public async Task<bool> Produce<T>(string functionName, T job, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(_serializer);
+        ArgumentNullException.ThrowIfNull(_jobSerializer);
 
-        return await Produce(functionName, _serializer.Serialize(job), cancellationToken);
+        return await Produce(functionName, _jobSerializer.Serialize(job), cancellationToken);
     }
     
     public async Task<bool> Produce<T>(string functionName, T job, ProducerOptions options, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(_serializer);
+        ArgumentNullException.ThrowIfNull(_jobSerializer);
 
-        return await Produce(functionName, _serializer.Serialize(job), options, cancellationToken);
+        return await Produce(functionName, _jobSerializer.Serialize(job), options, cancellationToken);
     }
     
     private async Task<bool> MultiServerProduce(string functionName, byte[] data, ProducerOptions options, CancellationToken cancellationToken = default)

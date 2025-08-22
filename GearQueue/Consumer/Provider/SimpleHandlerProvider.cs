@@ -1,6 +1,6 @@
 namespace GearQueue.Consumer.Provider;
 
-public class SimpleHandlerProvider : IGearQueueHandlerProvider
+public class SimpleHandlerProvider : IHandlerProvider
 {
     public IHandler? Get<T>() where T : IHandler
     {

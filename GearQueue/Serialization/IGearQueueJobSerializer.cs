@@ -1,6 +1,6 @@
 namespace GearQueue.Serialization;
 
-public interface IGearQueueSerializer
+public interface IGearQueueJobSerializer
 {
     T Deserialize<T>(ReadOnlySpan<byte> jobData);
     

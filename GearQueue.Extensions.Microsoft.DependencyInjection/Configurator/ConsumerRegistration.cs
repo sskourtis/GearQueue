@@ -10,6 +10,6 @@ public class ConsumerRegistration
     public Dictionary<string, (HandlerOptions, ServiceLifetime)> HandlerMapping { get; set; } = new();
     public IConfigurationSection? Section { get; set; }
     public string? ConnectionString { get; set; }
-    public Action<GearQueueConsumerOptions>? ConfigureOptions { get; set; }
+    public Action<ConsumerOptions>? ConfigureOptions { get; set; }
     public required ConsumerPipelineBuilder PipelineBuilder { get; init; }
 }

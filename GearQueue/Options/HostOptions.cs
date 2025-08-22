@@ -1,6 +1,6 @@
 namespace GearQueue.Options;
 
-public sealed class GearQueueHostOptions
+public sealed class HostOptions
 {
     /// <summary>
     /// Gearman job server hostname or IP 

@@ -11,12 +11,12 @@ using Microsoft.Extensions.Logging;
 namespace GearQueue.Consumer;
 
 internal class ConsumerConnection(
-    GearQueueConsumerHostsOptions options,
+    ConsumerHostsOptions options,
     ICollection<string> functions,
     AbstractHandlerExecutionCoordinator abstractHandlerExecutionCoordinator,
     ILoggerFactory loggerFactory) : IDisposable
 {
-    private readonly ILogger<IGearQueueConsumer> _logger = loggerFactory.CreateLogger<IGearQueueConsumer>();
+    private readonly ILogger<IConsumer> _logger = loggerFactory.CreateLogger<IConsumer>();
     private readonly Connection _connection = new(loggerFactory, options.Host);
     
     internal void RegisterResultCallback()

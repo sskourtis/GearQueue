@@ -6,18 +6,18 @@ using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer;
 
-public class GearQueueConsumer(
-    GearQueueConsumerOptions options,
+public class Consumer(
+    ConsumerOptions options,
     ConsumerPipeline consumerPipeline,
     Dictionary<string, HandlerOptions> handlers,
-    ILoggerFactory loggerFactory) : IGearQueueConsumer
+    ILoggerFactory loggerFactory) : IConsumer
 {
     /// <summary>
     /// Starts consuming gearman jobs. The returned task will not complete until cancellation is request 
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <exception cref="ArgumentException">Unsupported concurrency strategy</exception>
-    public async Task StartConsuming(CancellationToken cancellationToken)
+    public async Task Start(CancellationToken cancellationToken)
     {
         foreach (var (_, handlerOptions) in handlers)
         {
@@ -27,7 +27,7 @@ public class GearQueueConsumer(
             }
         }
         
-        var logger = loggerFactory.CreateLogger<GearQueueConsumer>();
+        var logger = loggerFactory.CreateLogger<Consumer>();
         
         var coordinators = new List<AbstractHandlerExecutionCoordinator>();
 

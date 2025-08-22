@@ -1,11 +1,11 @@
 namespace GearQueue.Options;
 
-public sealed class GearQueueConsumerOptions
+public sealed class ConsumerOptions
 {
     /// <summary>
     /// Options for each gearman job server.
     /// </summary>
-    public List<GearQueueConsumerHostsOptions> Hosts { get; set; } = new();
+    public List<ConsumerHostsOptions> Hosts { get; set; } = new();
 
     /// <summary>
     /// The maximum number of jobs to be handled at a time.

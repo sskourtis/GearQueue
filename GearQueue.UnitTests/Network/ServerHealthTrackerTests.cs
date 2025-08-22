@@ -7,12 +7,12 @@ namespace GearQueue.UnitTests.Network;
 
 public class ServerHealthTrackerTests
 {
-    private readonly GearQueueHostOptions _gearQueueHostOptions;
+    private readonly HostOptions _hostOptions;
     private readonly ILoggerFactory _loggerFactory;
 
     public ServerHealthTrackerTests()
     {
-        _gearQueueHostOptions = new GearQueueHostOptions
+        _hostOptions = new HostOptions
         {
             Hostname = "test-server",
             Port = 8080
@@ -198,7 +198,7 @@ public class ServerHealthTrackerTests
         TimeSpan? healthCheckInterval = null)
     {
         return new ServerHealthTracker(
-            _gearQueueHostOptions,
+            _hostOptions,
             failureThreshold,
             healthCheckInterval ?? TimeSpan.FromMinutes(1),
             _loggerFactory);

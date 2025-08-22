@@ -1,10 +1,10 @@
 namespace GearQueue.Options.Validation;
 
-public class GearQueueConsumerOptionsValidator : IGearQueueValidator<GearQueueConsumerOptions>
+public class ConsumerOptionsValidator : IValidator<ConsumerOptions>
 {
-    public ValidationResult Validate(GearQueueConsumerOptions options)
+    public ValidationResult Validate(ConsumerOptions options)
     {
-        var serverValidator = new GearQueueHostOptionsValidator();
+        var serverValidator = new HostOptionsValidator();
         
         var errors = new List<string>();
         

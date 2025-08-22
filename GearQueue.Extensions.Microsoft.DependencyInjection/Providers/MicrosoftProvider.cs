@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Providers;
 
-public class GearQueueMicrosoftProvider(IServiceProvider provider) : IGearQueueHandlerProvider
+public class MicrosoftProvider(IServiceProvider provider) : IHandlerProvider
 {
     public void Dispose()
     {

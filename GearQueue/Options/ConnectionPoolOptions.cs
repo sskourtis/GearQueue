@@ -5,7 +5,7 @@ public class ConnectionPoolOptions
     /// <summary>
     /// Gearman job server connection info
     /// </summary>
-    public required GearQueueHostOptions Host { get; set; }
+    public required HostOptions Host { get; set; }
     
     /// <summary>
     /// The maximum time a connection is kept alive and re-used. 

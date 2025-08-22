@@ -2,7 +2,7 @@ using GearQueue.Serialization;
 
 namespace GearQueue.Producer;
 
-public interface IGearQueueProducer<in T>
+public interface IProducer<in T>
 {
     /// <summary>
     /// Create a new gearman job for the given function with the given job data.
@@ -23,17 +23,17 @@ public interface IGearQueueProducer<in T>
     Task<bool> Produce(T job, ProducerOptions options, CancellationToken cancellationToken = default);
 }
 
-public class GearQueueProducer<T>(string functionName, 
-    IGearQueueSerializer serializer, 
-    IGearQueueProducer producer) : IGearQueueProducer<T>
+public class Producer<T>(string functionName, 
+    IGearQueueJobSerializer jobSerializer, 
+    IProducer producer) : IProducer<T>
 {
     public Task<bool> Produce(T job, CancellationToken cancellationToken = default)
     {
-        return producer.Produce(functionName, serializer.Serialize(job), cancellationToken);
+        return producer.Produce(functionName, jobSerializer.Serialize(job), cancellationToken);
     }
 
     public Task<bool> Produce(T job, ProducerOptions options, CancellationToken cancellationToken = default)
     {
-        return producer.Produce(functionName, serializer.Serialize(job), options, cancellationToken);   
+        return producer.Produce(functionName, jobSerializer.Serialize(job), options, cancellationToken);   
     }
 }

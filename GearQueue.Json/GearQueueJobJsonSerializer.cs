@@ -4,9 +4,9 @@ using GearQueue.Serialization;
 
 namespace GearQueue.Json;
 
-public class GearQueueJsonSerializer(JsonSerializerOptions options) : IGearQueueSerializer
+public class GearQueueJobJsonSerializer(JsonSerializerOptions options) : IGearQueueJobSerializer
 {
-    public GearQueueJsonSerializer() : this(new JsonSerializerOptions())
+    public GearQueueJobJsonSerializer() : this(new JsonSerializerOptions())
     {
     }
 

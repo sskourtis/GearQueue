@@ -1,11 +1,11 @@
 namespace GearQueue.Options;
 
-public sealed class GearQueueConsumerHostsOptions
+public sealed class ConsumerHostsOptions
 {
     /// <summary>
     /// Gearman job server connection info
     /// </summary>
-    public required GearQueueHostOptions Host { get; init; }
+    public required HostOptions Host { get; init; }
     
     /// <summary>
     /// Defines the number of parallel jobs to be executed in parallel.

@@ -14,7 +14,7 @@ internal sealed class ServerHealthTracker
     private readonly Lock _stateLock = new();
     
     // Configuration
-    private readonly GearQueueHostOptions _gearQueueHostOptions;
+    private readonly HostOptions _hostOptions;
     private readonly int _failureThreshold;
     private readonly TimeSpan _healthCheckInterval;
     private readonly ILogger<ServerHealthTracker> _logger;
@@ -22,13 +22,13 @@ internal sealed class ServerHealthTracker
     internal bool IsHealthy => _state == HealthStatus.Healthy;
     internal DateTimeOffset LastFailureTime { get; private set; } = DateTimeOffset.MinValue;
 
-    internal ServerHealthTracker(GearQueueHostOptions gearQueueHostOptions, 
+    internal ServerHealthTracker(HostOptions hostOptions, 
         int failureThreshold, 
         TimeSpan healthCheckInterval,
         ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<ServerHealthTracker>();
-        _gearQueueHostOptions = gearQueueHostOptions;
+        _hostOptions = hostOptions;
         _failureThreshold = failureThreshold;
         _healthCheckInterval = healthCheckInterval;
     }
@@ -39,7 +39,7 @@ internal sealed class ServerHealthTracker
         {
             if (_state == HealthStatus.Unhealthy)
             {
-                _logger.LogHealthyServer(_gearQueueHostOptions.Hostname, _gearQueueHostOptions.Port);
+                _logger.LogHealthyServer(_hostOptions.Hostname, _hostOptions.Port);
             }
             
             _state = HealthStatus.Healthy;
@@ -59,7 +59,7 @@ internal sealed class ServerHealthTracker
                 
                 if (_failureCount >= _failureThreshold)
                 {
-                    _logger.LogUnhealthyServer(_gearQueueHostOptions.Hostname, _gearQueueHostOptions.Port, _failureCount);
+                    _logger.LogUnhealthyServer(_hostOptions.Hostname, _hostOptions.Port, _failureCount);
                     // Too many failures, mark server as unhealthy
                     _state = HealthStatus.Unhealthy;
                 }
@@ -81,7 +81,7 @@ internal sealed class ServerHealthTracker
                     var timeSinceLastCheck = DateTimeOffset.UtcNow - LastFailureTime;
                     if (timeSinceLastCheck >= _healthCheckInterval)
                     {
-                        _logger.LogUnhealthyServerAttempt(_gearQueueHostOptions.Hostname, _gearQueueHostOptions.Port, timeSinceLastCheck);
+                        _logger.LogUnhealthyServerAttempt(_hostOptions.Hostname, _hostOptions.Port, timeSinceLastCheck);
                         return true;
                     }
 

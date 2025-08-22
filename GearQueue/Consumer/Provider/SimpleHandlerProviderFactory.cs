@@ -1,10 +1,10 @@
 namespace GearQueue.Consumer.Provider;
 
-public class SimpleHandlerProviderFactory : IGearQueueHandlerProviderFactory
+public class SimpleHandlerProviderFactory : IHandlerProviderFactory
 {
     private static readonly SimpleHandlerProvider Instance = new();
     
-    public IGearQueueHandlerProvider Create()
+    public IHandlerProvider Create()
     {
         return Instance;
     }

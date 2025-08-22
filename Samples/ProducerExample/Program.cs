@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text;
-using GearQueue.Consumer;
 using GearQueue.Extensions.Microsoft.DependencyInjection;
 using GearQueue.Json;
 using GearQueue.Producer;
@@ -15,7 +14,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddGearQueue(g =>
 {
-    g.SetDefaultSerializer(new GearQueueJsonSerializer());
+    g.SetDefaultSerializer(new GearQueueJobJsonSerializer());
     
     g.AddProducer(builder.Configuration.GetConnectionString("Producer")!);
     g.AddNamedProducer("primary", builder.Configuration.GetConnectionString("ProducerA")!);
@@ -40,7 +39,7 @@ app.UseHttpsRedirection();
 app.MapGet("/test", () => Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}") )
     .WithName("Test");
 
-app.MapGet("/produce/{name}", async (IGearQueueProducerFactory factory, JobCounter counter, string name) =>
+app.MapGet("/produce/{name}", async (IProducerFactory factory, JobCounter counter, string name) =>
     {
         var producer = factory.Get(name);
 
@@ -62,7 +61,7 @@ app.MapGet("/produce/{name}", async (IGearQueueProducerFactory factory, JobCount
     })
     .WithName("Produce from factory");
 
-app.MapGet("/produce", async (IGearQueueProducer<JobContract> producer, JobCounter counter) =>
+app.MapGet("/produce", async (IProducer<JobContract> producer, JobCounter counter) =>
     {
         var result = await producer.Produce(new JobContract { TestValue = $"Test {Guid.NewGuid():N}" });
 
@@ -77,7 +76,7 @@ app.MapGet("/produce", async (IGearQueueProducer<JobContract> producer, JobCount
     })
     .WithName("Produce");
 
-app.MapGet("/produce-batch", async (IGearQueueProducer producer, JobCounter counter, [FromQuery] string? key) =>
+app.MapGet("/produce-batch", async (IProducer producer, JobCounter counter, [FromQuery] string? key) =>
     {
         var result = await producer.Produce("test-batch-function", 
             new JobContract
@@ -100,7 +99,7 @@ app.MapGet("/produce-batch", async (IGearQueueProducer producer, JobCounter coun
     })
     .WithName("Produce Batch");
 
-app.MapGet("/produce-random", async (IGearQueueProducer producer, JobCounter counter) =>
+app.MapGet("/produce-random", async (IProducer producer, JobCounter counter) =>
     {
         var result = await producer.Produce(Random.Shared.Next(10) > 5 
             ? "test-function"
@@ -117,7 +116,7 @@ app.MapGet("/produce-random", async (IGearQueueProducer producer, JobCounter cou
     })
     .WithName("Produce Random");
 
-app.MapGet("/status", (IGearQueueProducer producer, JobCounter counter) =>
+app.MapGet("/status", (IProducer producer, JobCounter counter) =>
     {
         return Task.FromResult(new
         {

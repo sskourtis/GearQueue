@@ -6,5 +6,5 @@ public class HandlerOptions
 {
     public required Type Type { get; init; }
     
-    public IGearQueueSerializer? Serializer { get; set; }
+    public IGearQueueJobSerializer? Serializer { get; set; }
 }

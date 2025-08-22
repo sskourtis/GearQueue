@@ -43,7 +43,7 @@ public class ConsumerPipelineBuilder(IServiceCollection serviceCollection)
 
         middlewares.Add(
             new HandlerExecutionMiddleware(serviceProvider.GetRequiredService<ILoggerFactory>(),
-                new GearQueueMicrosoftProviderFactory(createScope,
+                new MicrosoftProviderFactory(createScope,
                     serviceProvider.GetRequiredService<IServiceProvider>())
             ));
         

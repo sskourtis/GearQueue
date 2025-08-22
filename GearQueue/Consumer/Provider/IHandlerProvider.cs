@@ -1,6 +1,6 @@
 namespace GearQueue.Consumer.Provider;
 
-public interface IGearQueueHandlerProvider : IDisposable
+public interface IHandlerProvider : IDisposable
 {
     IHandler? Get<T>() where T : IHandler;
 

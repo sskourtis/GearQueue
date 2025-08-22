@@ -5,9 +5,9 @@ namespace GearQueue.Extensions.Microsoft.DependencyInjection;
 
 public static class GearQueueExtensions
 {
-    public static IServiceCollection AddGearQueue(this IServiceCollection services, Action<GearQueueConfigurator> configurator)
+    public static IServiceCollection AddGearQueue(this IServiceCollection services, Action<Configurator.Configurator> configurator)
     {
-        var config = new GearQueueConfigurator(services);
+        var config = new Configurator.Configurator(services);
         
         configurator(config);
         

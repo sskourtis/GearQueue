@@ -7,6 +7,19 @@ public class ConsumerOptionsValidator : IValidator<ConsumerOptions>
         var serverValidator = new HostOptionsValidator();
         
         var errors = new List<string>();
+
+        if (options.MaxConcurrency <= 0)
+        {
+            errors.Add("Max concurrency must be greater than zero");
+        }
+        
+        if (options.ConcurrencyStrategy is not 
+            (ConcurrencyStrategy.AcrossServers or 
+            ConcurrencyStrategy.PerServer or 
+            ConcurrencyStrategy.PerConnection))
+        {
+            errors.Add($"Concurrency strategy {options.ConcurrencyStrategy} not supported");       
+        }
         
         if (options.Hosts.Count == 0)
         {
@@ -19,6 +32,11 @@ public class ConsumerOptionsValidator : IValidator<ConsumerOptions>
         {
             var serverValidationResult = serverValidator.Validate(servers.Host);
 
+            if (servers.Connections <= 0)
+            {
+                errors.Add("Connections must be greater than zero");
+            }
+            
             if (!serverValidationResult.IsValid)
             {
                 errors.AddRange(serverValidationResult.Errors);    

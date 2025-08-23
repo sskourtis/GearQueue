@@ -33,6 +33,11 @@ public class ProducerOptionsValidator : IValidator<ProducerOptions>
             {
                 errors.Add("connection pool max age must be greater than zero");
             }
+            
+            if (connectionPoolSettings.NewConnectionTimeout <= TimeSpan.Zero)
+            {
+                errors.Add("new connection timeout must be greater than zero");
+            }
 
             if (connectionPoolSettings.MaxConnections <= 0)
             {

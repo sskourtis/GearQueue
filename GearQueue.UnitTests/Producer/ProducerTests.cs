@@ -130,6 +130,62 @@ public class ProducerTests
         pool.Received(1).Return(connection, false);
     }
     
+    [InlineData(null, null)]
+    [InlineData(JobPriority.High, null)]
+    [InlineData(JobPriority.Normal, null)]
+    [InlineData(JobPriority.Low, null)]
+    [InlineData(JobPriority.High, "123456")]
+    [InlineData(null, "654321")]
+    [Theory]
+    public async Task Produce_ShouldSucceed_WithSingleHealthyPoolWhenSendingTypedPayload(JobPriority? priority, string? batchKey)
+    {
+        // Arrange
+        var (pool, _) = SetupSut(new ProducerOptions
+        {
+            DistributionStrategy = DistributionStrategy.RoundRobin,
+            ConnectionPools = [new ConnectionPoolOptions { Host = new HostOptions { Hostname = "localhost", }, }]
+        });
+
+        var connection = SetupPool(pool, PacketType.JobCreated);
+
+        var testObject = new
+        {
+            Test = "Test"
+        };
+        
+        var serializedData = RandomData.GetRandomBytes(10);
+        _serializer.Serialize(testObject).Returns(serializedData);
+        
+        var requestPacket = RequestFactory.SubmitJob(_functionName,
+            UniqueId.Create(_cid, batchKey), serializedData, priority ?? JobPriority.Normal);
+
+        var jobOptions = priority.HasValue
+            ? new JobOptions
+            {
+                CorrelationId = _cid,
+                Priority = priority.Value,
+                BatchKey = batchKey,
+            }
+            : new JobOptions
+            {
+                CorrelationId = _cid,
+                BatchKey = batchKey,
+            };
+        
+        // Act
+        var result = await _sut.Produce(_functionName, testObject, jobOptions, CancellationToken.None);
+
+        // Assert
+        Assert.True(result);
+
+        await connection
+            .Received(1)
+            .SendPacket(Arg.Is<RequestPacket>(r => r.FullData.IsEquivalent(requestPacket.FullData)),
+                CancellationToken.None);
+
+        pool.Received(1).Return(connection, false);
+    }
+    
     [Fact]
     public async Task Produce_ShouldFail_WhenSendPacketThrows()
     {

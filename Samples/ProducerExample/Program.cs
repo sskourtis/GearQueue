@@ -83,7 +83,7 @@ app.MapGet("/produce-batch", async (IProducer producer, JobCounter counter, [Fro
             {
                 TestValue = $"Test {Guid.NewGuid():N}", 
             },
-            new ProducerOptions
+            new JobOptions
             {
                 BatchKey = key,
             });

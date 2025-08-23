@@ -20,7 +20,7 @@ public interface IProducer<in T>
     /// <param name="options">Extra submission options</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns></returns>
-    Task<bool> Produce(T job, ProducerOptions options, CancellationToken cancellationToken = default);
+    Task<bool> Produce(T job, JobOptions options, CancellationToken cancellationToken = default);
 }
 
 public class Producer<T>(string functionName, 
@@ -32,7 +32,7 @@ public class Producer<T>(string functionName,
         return producer.Produce(functionName, jobSerializer.Serialize(job), cancellationToken);
     }
 
-    public Task<bool> Produce(T job, ProducerOptions options, CancellationToken cancellationToken = default)
+    public Task<bool> Produce(T job, JobOptions options, CancellationToken cancellationToken = default)
     {
         return producer.Produce(functionName, jobSerializer.Serialize(job), options, cancellationToken);   
     }

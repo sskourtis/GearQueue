@@ -35,7 +35,7 @@ public interface IProducer
     /// <param name="options">Extra submission options</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns></returns>
-    Task<bool> Produce(string functionName, byte[] data, ProducerOptions options, CancellationToken cancellationToken = default);
+    Task<bool> Produce(string functionName, byte[] data, JobOptions options, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// Create a new gearman job for the given function with the given job data.
@@ -54,12 +54,12 @@ public interface IProducer
     /// <param name="options">Extra submission options</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns></returns>
-    Task<bool> Produce<T>(string functionName, T job, ProducerOptions options, CancellationToken cancellationToken = default);
+    Task<bool> Produce<T>(string functionName, T job, JobOptions options, CancellationToken cancellationToken = default);
 }
 
 public class Producer : IDisposable, INamedProducer
 {
-    private static readonly ProducerOptions DefaultOptions = new();
+    private static readonly JobOptions DefaultOptions = new();
     
     private bool _disposed;
     private readonly ILogger _logger;
@@ -121,7 +121,7 @@ public class Producer : IDisposable, INamedProducer
         return await MultiServerProduce(functionName, data, DefaultOptions, cancellationToken).ConfigureAwait(false);
     }
     
-    public async Task<bool> Produce(string functionName, byte[] data, ProducerOptions options, CancellationToken cancellationToken = default)
+    public async Task<bool> Produce(string functionName, byte[] data, JobOptions options, CancellationToken cancellationToken = default)
     {
         if (_connectionPools.Length == 1)
         {
@@ -138,14 +138,14 @@ public class Producer : IDisposable, INamedProducer
         return await Produce(functionName, _jobSerializer.Serialize(job), cancellationToken);
     }
     
-    public async Task<bool> Produce<T>(string functionName, T job, ProducerOptions options, CancellationToken cancellationToken = default)
+    public async Task<bool> Produce<T>(string functionName, T job, JobOptions options, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(_jobSerializer);
 
         return await Produce(functionName, _jobSerializer.Serialize(job), options, cancellationToken);
     }
     
-    private async Task<bool> MultiServerProduce(string functionName, byte[] data, ProducerOptions options, CancellationToken cancellationToken = default)
+    private async Task<bool> MultiServerProduce(string functionName, byte[] data, JobOptions options, CancellationToken cancellationToken = default)
     {
         var serverIndex = SelectServerIndex();
 
@@ -204,7 +204,7 @@ public class Producer : IDisposable, INamedProducer
     private async Task<bool> Produce(int serverIndex, 
         string functionName, 
         byte[] data,
-        ProducerOptions options,
+        JobOptions options,
         CancellationToken cancellationToken = default)
     {
         IConnection? connection = null;

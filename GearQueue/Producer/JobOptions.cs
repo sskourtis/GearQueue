@@ -2,7 +2,7 @@ using GearQueue.Protocol;
 
 namespace GearQueue.Producer;
 
-public record ProducerOptions
+public record JobOptions
 {
     public string? CorrelationId { get; init; }
     public string? BatchKey { get; init; }

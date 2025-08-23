@@ -63,7 +63,7 @@ public class Producer : IDisposable, INamedProducer
     
     private bool _disposed;
     private readonly ILogger _logger;
-    private readonly Options.ProducerOptions _options;
+    private readonly ProducerOptions _options;
     private readonly IConnectionPool[] _connectionPools;
     private readonly IGearQueueJobSerializer? _jobSerializer;
     
@@ -73,7 +73,7 @@ public class Producer : IDisposable, INamedProducer
     
     public required string Name { get; init; }
 
-    public Producer(Options.ProducerOptions options, ILoggerFactory loggerFactory)
+    public Producer(ProducerOptions options, ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
@@ -82,7 +82,7 @@ public class Producer : IDisposable, INamedProducer
             .ToArray<IConnectionPool>();
     }
     
-    public Producer(Options.ProducerOptions options, IGearQueueJobSerializer? jobSerializer, ILoggerFactory loggerFactory)
+    public Producer(ProducerOptions options, IGearQueueJobSerializer? jobSerializer, ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
@@ -92,7 +92,7 @@ public class Producer : IDisposable, INamedProducer
             .ToArray<IConnectionPool>();
     }
     
-    internal Producer(Options.ProducerOptions options, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
+    internal Producer(ProducerOptions options, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
@@ -101,7 +101,7 @@ public class Producer : IDisposable, INamedProducer
             .ToArray();
     }
 
-    internal Producer(Options.ProducerOptions options, IGearQueueJobSerializer jobSerializer, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
+    internal Producer(ProducerOptions options, IGearQueueJobSerializer jobSerializer, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
     {
         _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;

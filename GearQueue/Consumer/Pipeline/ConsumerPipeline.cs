@@ -1,6 +1,11 @@
 namespace GearQueue.Consumer.Pipeline;
 
-public class ConsumerPipeline
+public interface IConsumerPipeline
+{
+    Task InvokeAsync(JobContext context);
+}
+
+public class ConsumerPipeline : IConsumerPipeline
 {
     private readonly IGearQueueMiddleware[] _middlewares;
     private readonly ConsumerDelegate _pipeline;

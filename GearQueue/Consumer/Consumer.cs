@@ -74,7 +74,7 @@ public class Consumer(
                         break;
                 }
 
-                return Enumerable.Repeat(0, serverOptions.Connections)
+                return Enumerable.Range(0, serverOptions.Connections)
                     .Select(index =>
                     {
                         var jobManager = sharedJobManager;

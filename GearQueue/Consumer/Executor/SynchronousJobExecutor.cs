@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Executor;
 
-internal class SynchronousJobExecutor(ConsumerPipeline consumerPipeline, ILoggerFactory loggerFactory) 
+internal class SynchronousJobExecutor(IConsumerPipeline consumerPipeline, ILoggerFactory loggerFactory) 
     : AbstractJobExecutor(loggerFactory)
 {
     internal override async Task<JobResult?> Execute(JobContext context, CancellationToken cancellationToken)
@@ -29,13 +29,20 @@ internal class SynchronousJobExecutor(ConsumerPipeline consumerPipeline, ILogger
         }
         catch (Exception e)
         {
+            Logger.LogConsumerException(e);
+
+            if (!context.IsBatch)
+            {
+                return JobResult.PermanentFailure;
+            }
+            
             foreach (var batchedJobContext in context.Batches)
             {
                 await NotifyCallback(batchedJobContext, JobResult.PermanentFailure);
             }
-            
-            Logger.LogConsumerException(e);
-            return JobResult.PermanentFailure;
+
+            return null;
+
         }
     }
 }

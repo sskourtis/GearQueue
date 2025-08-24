@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Executor;
 
-internal class AsynchronousAbstractJobExecutor(
+internal class AsynchronousJobExecutor(
     ConsumerOptions options,
-    ConsumerPipeline consumerPipeline,
+    IConsumerPipeline consumerPipeline,
     ILoggerFactory loggerFactory) 
     : AbstractJobExecutor(loggerFactory)
 {

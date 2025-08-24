@@ -36,7 +36,7 @@ public class Consumer(
             (options.Hosts.Count > 1 || options.MaxConcurrency > 1))
         {
             logger.LogInformation("Using shared job manager with asynchronous job executor");
-            var executor = new AsynchronousAbstractJobExecutor(options, consumerPipeline, loggerFactory);
+            var executor = new AsynchronousJobExecutor(options, consumerPipeline, loggerFactory);
             jobExecutors.Add(executor);
             
             globalManager = new JobManager(executor, loggerFactory, handlers);
@@ -60,7 +60,7 @@ public class Consumer(
                         break;
                     case ConcurrencyStrategy.PerServer when serverOptions.Connections > 1:
                         // PerServer, all the connections to this server share the same coordinator
-                        var executor = new AsynchronousAbstractJobExecutor(options, consumerPipeline, loggerFactory);
+                        var executor = new AsynchronousJobExecutor(options, consumerPipeline, loggerFactory);
                         jobExecutors.Add(executor);
                         
                         sharedJobManager = new JobManager(executor, loggerFactory, handlers);
@@ -95,7 +95,7 @@ public class Consumer(
                                     index,
                                     serverOptions.Host.Hostname, 
                                     serverOptions.Host.Port);
-                                var executor = new AsynchronousAbstractJobExecutor(options, consumerPipeline, loggerFactory);
+                                var executor = new AsynchronousJobExecutor(options, consumerPipeline, loggerFactory);
                                 jobExecutors.Add(executor);
                                 jobManager =  new JobManager(executor, loggerFactory, handlers);
                                 break;

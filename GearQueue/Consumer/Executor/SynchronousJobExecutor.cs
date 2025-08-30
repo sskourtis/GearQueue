@@ -29,7 +29,7 @@ internal class SynchronousJobExecutor(IConsumerPipeline consumerPipeline, ILogge
         }
         catch (Exception e)
         {
-            Logger.LogConsumerException(e);
+            Logger?.LogConsumerException(e);
 
             if (!context.IsBatch)
             {

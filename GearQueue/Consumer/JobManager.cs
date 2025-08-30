@@ -22,10 +22,17 @@ internal class JobManager(
     ILoggerFactory loggerFactory,
     Dictionary<string, HandlerOptions> handlers) : IJobManager
 {
-    private readonly BatchJobManager[] _batchJobManagers = handlers
+    private readonly IBatchJobManager[] _batchJobManagers = handlers
         .Where(h => h.Value.Batch is not null)
         .Select(c => new BatchJobManager(c.Key, c.Value))
-        .ToArray();
+        .ToArray<IBatchJobManager>();
+
+    // This constructor exists only for unit testing purposes
+    public JobManager(AbstractJobExecutor executor, ILoggerFactory logger, Dictionary<string, HandlerOptions> handlers, IBatchJobManager[] batchJobManagers)
+        : this(executor, logger, handlers)
+    {
+        _batchJobManagers = batchJobManagers;
+    }
     
     private readonly ILogger _logger = loggerFactory.CreateLogger<JobManager>();
 

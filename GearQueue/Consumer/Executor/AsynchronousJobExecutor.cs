@@ -42,7 +42,7 @@ internal class AsynchronousJobExecutor(
         {
             await NotifyCallback(context, JobResult.PermanentFailure);
             
-            Logger.LogConsumerException(e);
+            Logger?.LogConsumerException(e);
         }
         finally
         {

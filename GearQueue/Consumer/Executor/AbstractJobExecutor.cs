@@ -3,14 +3,18 @@ using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Executor;
 
-internal abstract class AbstractJobExecutor(ILoggerFactory loggerFactory) : IJobExecutor
+internal abstract class AbstractJobExecutor(ILoggerFactory? loggerFactory) : IJobExecutor
 {
-    protected readonly ILogger<AbstractJobExecutor> Logger = loggerFactory.CreateLogger<SynchronousJobExecutor>();
+    protected readonly ILogger<AbstractJobExecutor>? Logger = loggerFactory?.CreateLogger<SynchronousJobExecutor>();
     
     internal abstract Task<JobResult?> Execute(JobContext context, CancellationToken cancellationToken);
     
     protected readonly Dictionary<int, Func<string, JobResult, Task>> JobResultCallback = new();
     protected readonly ConcurrentDictionary<Guid, TaskCompletionSource<bool>> ActiveJobs = new();
+
+    public AbstractJobExecutor() : this(null)
+    {
+    }
     
     public void RegisterAsyncResultCallback(int connectionId, Func<string, JobResult, Task> callback)
     {

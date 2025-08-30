@@ -3,7 +3,14 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace GearQueue.Consumer;
 
-internal class BatchJobManager(string functionName, HandlerOptions options)
+internal interface IBatchJobManager
+{
+    (TimeSpan?, IEnumerable<JobContext>?) TryGetJobs(int connectionId, JobAssign? job);
+    
+    string FunctionName { get; }
+}
+
+internal class BatchJobManager(string functionName, HandlerOptions options) : IBatchJobManager
 {
     private static readonly ObjectPool<BatchData> BatchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
     

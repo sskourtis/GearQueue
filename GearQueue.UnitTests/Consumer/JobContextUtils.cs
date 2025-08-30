@@ -1,6 +1,7 @@
 using System.Text;
 using GearQueue.Consumer;
 using GearQueue.Consumer.Executor;
+using GearQueue.Protocol;
 using GearQueue.Protocol.Response;
 using GearQueue.UnitTests.Utils;
 
@@ -8,17 +9,28 @@ namespace GearQueue.UnitTests.Consumer;
 
 public static class JobContextUtils
 {
-    public static JobAssign CreateJobAssign()
+    public static JobAssign CreateJobAssign(string? functionName = null)
     {
         var handle = $"job_handle_{RandomData.GetString(5)}";
-        var functionName = $"function_name_{RandomData.GetString(5)}";
-        var uniqueId = RandomData.GetString(30);
+        functionName ??= $"function_name_{RandomData.GetString(5)}";
+        var payload = RandomData.GetRandomBytes(25);
+        
+        var packetData = Encoding.UTF8.GetBytes($"{handle}\0{functionName}\0").ToList();
+        packetData.AddRange(payload);
+
+        return JobAssign.Create(packetData.ToArray());
+    }
+    
+    public static JobAssign CreateJobAssignWithKey(string? functionName, string key)
+    {
+        var handle = $"job_handle_{RandomData.GetString(5)}";
+        var uniqueId = UniqueId.Create(RandomData.GetString(2), key);
         var payload = RandomData.GetRandomBytes(25);
         
         var packetData = Encoding.UTF8.GetBytes($"{handle}\0{functionName}\0{uniqueId}\0").ToList();
         packetData.AddRange(payload);
 
-        return JobAssign.Create(packetData.ToArray());
+        return JobAssign.CreateUniq(packetData.ToArray());
     }
     
     public  static JobContext CreateJobContext(int connectionId = 1)

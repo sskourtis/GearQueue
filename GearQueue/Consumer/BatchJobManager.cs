@@ -3,12 +3,21 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace GearQueue.Consumer;
 
-public class BatchJobManager(string functionName, HandlerOptions options)
+internal class BatchJobManager(string functionName, HandlerOptions options)
 {
     private static readonly ObjectPool<BatchData> BatchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
     
     // When ByKey=false, there can only ever be one pending batch
     private readonly List<BatchData> _pendingBatches = [];
+    private readonly TimeProvider _timeProvider = TimeProvider.System;
+
+    // This constructor exists only for unit testing purposes
+    internal BatchJobManager(string functionName, HandlerOptions options, TimeProvider timeProvider, List<BatchData>? pendingBatches = null)
+        : this(functionName, options)
+    {
+        _timeProvider = timeProvider;
+        _pendingBatches = pendingBatches ?? _pendingBatches;
+    }
 
     public string FunctionName => functionName;
     
@@ -67,7 +76,7 @@ public class BatchJobManager(string functionName, HandlerOptions options)
                 job = null;
             }
                 
-            var batchNextTimeout = options.Batch!.TimeLimit - (DateTimeOffset.UtcNow - batch.Created);
+            var batchNextTimeout = options.Batch!.TimeLimit - (_timeProvider.GetUtcNow() - batch.Created);
                 
             if (batch.Jobs.Count < options.Batch!.Size &&
                 batchNextTimeout > TimeSpan.Zero)
@@ -104,22 +113,18 @@ public class BatchJobManager(string functionName, HandlerOptions options)
             
         batch.Jobs.Add((connectionId, job));
             
-        batch.Created = DateTimeOffset.UtcNow;
+        batch.Created = _timeProvider.GetUtcNow();
 
         if (options.Batch!.ByKey)
         {
             batch.Key = job.BatchKey;   
         }
-            
-        batch.Function = job.FunctionName;
-            
 
         return batch;
     }
     
-    private class BatchData
+    internal class BatchData
     {
-        public string Function { get; set; } = string.Empty;
         public string? Key { get; set; }
 
         public List<(int ConnectionId, JobAssign Job)> Jobs { get; set; } = [];

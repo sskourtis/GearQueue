@@ -1,5 +1,6 @@
 using GearQueue.Consumer.Executor;
 using GearQueue.Logging;
+using GearQueue.Metrics;
 using GearQueue.Protocol.Request;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.Logging;
@@ -20,11 +21,12 @@ internal interface IJobManager
 internal class JobManager(
     AbstractJobExecutor executor,
     ILoggerFactory loggerFactory,
-    Dictionary<string, HandlerOptions> handlers) : IJobManager
+    Dictionary<string, HandlerOptions> handlers,
+    IMetricsCollector? metricsCollector = null) : IJobManager
 {
     private readonly IBatchJobManager[] _batchJobManagers = handlers
         .Where(h => h.Value.Batch is not null)
-        .Select(c => new BatchJobManager(c.Key, c.Value))
+        .Select(c => new BatchJobManager(c.Key, c.Value, metricsCollector))
         .ToArray<IBatchJobManager>();
 
     // This constructor exists only for unit testing purposes

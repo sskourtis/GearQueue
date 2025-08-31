@@ -6,12 +6,12 @@ namespace GearQueue.Consumer;
 public class JobContext
 {
     private readonly IGearQueueJobSerializer? _serializer;
-    private readonly IEnumerable<JobContext>? _batchContexts;
+    private readonly JobContext[]? _batchContexts;
     private readonly JobAssign? _jobAssign;
     
     internal int? ConnectionId { get; set; }
     
-    internal JobResult? Result { get; private set; }
+    public JobResult? Result { get; private set; }
     
     internal string JobHandle => _jobAssign!.JobHandle;
 
@@ -21,9 +21,7 @@ public class JobContext
         ? throw new Exception("Job context has not been assigned, is this a batch context?") 
         : _jobAssign.Data;
 
-    public virtual IEnumerable<JobContext> Batches => _batchContexts is null
-        ? throw new Exception("This is not a batch context")
-        : _batchContexts;
+    public virtual JobContext[] Batches => _batchContexts ?? throw new Exception("This is not a batch context");
     
     public string FunctionName => _jobAssign?.FunctionName ?? _batchContexts?.First().FunctionName ?? throw new Exception("Job context has not been assigned");
     

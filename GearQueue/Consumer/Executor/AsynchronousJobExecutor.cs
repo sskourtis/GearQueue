@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using GearQueue.Consumer.Pipeline;
 using GearQueue.Logging;
+using GearQueue.Metrics;
 using GearQueue.Options;
 using Microsoft.Extensions.Logging;
 
@@ -8,14 +10,17 @@ namespace GearQueue.Consumer.Executor;
 internal class AsynchronousJobExecutor(
     ConsumerOptions options,
     IConsumerPipeline consumerPipeline,
-    ILoggerFactory loggerFactory) 
+    ILoggerFactory loggerFactory,
+    IMetricsCollector? metricsCollector = null) 
     : AbstractJobExecutor(loggerFactory)
 {
     private readonly SemaphoreSlim _handlerSemaphore = new(options.MaxConcurrency, options.MaxConcurrency);
     
     internal override async Task<JobResult?> Execute(JobContext context, CancellationToken cancellationToken)
     {
+        var stopwatch = Stopwatch.StartNew();
         await _handlerSemaphore.WaitAsync(cancellationToken);
+        metricsCollector?.HandlerWaitTime(stopwatch.Elapsed);
         
         var executionId = Guid.NewGuid();
         var taskCompletionSource = new TaskCompletionSource<bool>();
@@ -32,17 +37,15 @@ internal class AsynchronousJobExecutor(
     {
         try
         {
-            await consumerPipeline.InvokeAsync(context);
+            await CallPipeline(consumerPipeline, context, metricsCollector);
 
             var result = context.Result ?? JobResult.PermanentFailure;
 
             await NotifyCallback(context, result);
         }
-        catch (Exception e)
+        catch
         {
             await NotifyCallback(context, JobResult.PermanentFailure);
-            
-            Logger?.LogConsumerException(e);
         }
         finally
         {

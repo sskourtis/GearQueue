@@ -2,8 +2,10 @@ using System.Reflection;
 using System.Text;
 using GearQueue.Extensions.Microsoft.DependencyInjection;
 using GearQueue.Producer;
+using GearQueue.PrometheusNet;
 using GearQueue.Serialization;
 using Microsoft.AspNetCore.Mvc;
+using Prometheus;
 using SampleUtils;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +17,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddGearQueue(g =>
 {
     g.SetDefaultSerializer(new GearQueueJsonJobSerializer());
+    g.SetMetricsCollector<PrometheusMetricsCollector>();
     
     g.AddProducer(builder.Configuration.GetConnectionString("Producer")!);
     g.AddNamedProducer("primary", builder.Configuration.GetConnectionString("ProducerA")!);
@@ -35,6 +38,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments(other: "/health"),
+    config =>
+    {
+        config.UseHttpMetrics();
+    });
+
+app.MapMetrics();
 
 app.MapGet("/test", () => Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}") )
     .WithName("Test");

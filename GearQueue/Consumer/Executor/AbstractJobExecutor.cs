@@ -1,4 +1,8 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using GearQueue.Consumer.Pipeline;
+using GearQueue.Logging;
+using GearQueue.Metrics;
 using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Executor;
@@ -12,6 +16,7 @@ internal abstract class AbstractJobExecutor(ILoggerFactory? loggerFactory) : IJo
     protected readonly Dictionary<int, Func<string, JobResult, Task>> JobResultCallback = new();
     protected readonly ConcurrentDictionary<Guid, TaskCompletionSource<bool>> ActiveJobs = new();
 
+    // needed by unit tests
     public AbstractJobExecutor() : this(null)
     {
     }
@@ -24,6 +29,27 @@ internal abstract class AbstractJobExecutor(ILoggerFactory? loggerFactory) : IJo
     public async Task WaitAllExecutions()
     {
         await Task.WhenAll(ActiveJobs.Values.Select(t => t.Task)).ConfigureAwait(false);;
+    }
+
+    protected async Task CallPipeline(IConsumerPipeline pipeline, JobContext context, IMetricsCollector? metricsCollector)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            metricsCollector?.JobHandlingStarted(context.FunctionName, context.IsBatch ? context.Batches.Length : 1);
+            await pipeline.InvokeAsync(context);
+            
+            metricsCollector?.JobsHandled(context.FunctionName, context.Result ?? JobResult.PermanentFailure, stopwatch.Elapsed,
+                context.IsBatch ? context.Batches.Length : 1);
+        }
+        catch (Exception e)
+        {
+            Logger?.LogConsumerException(e);
+            
+            metricsCollector?.JobsHandled(context.FunctionName, JobResult.PermanentFailure, stopwatch.Elapsed,
+                context.IsBatch ? context.Batches.Length : 1);
+            throw;
+        }
     }
 
     protected async Task NotifyCallback(JobContext context, JobResult result)

@@ -1,17 +1,17 @@
 using GearQueue.Consumer.Pipeline;
-using GearQueue.Logging;
+using GearQueue.Metrics;
 using Microsoft.Extensions.Logging;
 
 namespace GearQueue.Consumer.Executor;
 
-internal class SynchronousJobExecutor(IConsumerPipeline consumerPipeline, ILoggerFactory loggerFactory) 
+internal class SynchronousJobExecutor(IConsumerPipeline consumerPipeline, ILoggerFactory loggerFactory, IMetricsCollector? metricsCollector = null) 
     : AbstractJobExecutor(loggerFactory)
 {
     internal override async Task<JobResult?> Execute(JobContext context, CancellationToken cancellationToken)
     {
         try
         {
-            await consumerPipeline.InvokeAsync(context);
+            await CallPipeline(consumerPipeline, context, metricsCollector);
 
             var result = context.Result ?? JobResult.PermanentFailure;
 
@@ -27,10 +27,8 @@ internal class SynchronousJobExecutor(IConsumerPipeline consumerPipeline, ILogge
 
             return null;
         }
-        catch (Exception e)
+        catch
         {
-            Logger?.LogConsumerException(e);
-
             if (!context.IsBatch)
             {
                 return JobResult.PermanentFailure;

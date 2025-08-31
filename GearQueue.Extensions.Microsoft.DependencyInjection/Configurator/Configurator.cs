@@ -1,6 +1,7 @@
 using System.Reflection;
 using GearQueue.Consumer;
 using GearQueue.Extensions.Microsoft.DependencyInjection.Middlewares;
+using GearQueue.Metrics;
 using GearQueue.Options;
 using GearQueue.Options.Parser;
 using GearQueue.Options.Validation;
@@ -43,6 +44,16 @@ public class Configurator
             _services.TryAddSingleton<ScopedHandlerExecutionMiddleware>();
             _services.TryAddSingleton<UnscopedHandlerExecutionMiddleware>();
         }
+    }
+
+    public void SetMetricsCollector<T>() where T : class, IMetricsCollector
+    {
+        _services.AddSingleton<IMetricsCollector, T>();
+    }
+    
+    public void SetMetricsCollector(IMetricsCollector metricsCollector)
+    {
+        _services.AddSingleton(metricsCollector);
     }
 
     public void SetDefaultSerializer(IGearQueueJobSerializer jobSerializer)
@@ -140,7 +151,11 @@ public class Configurator
                 .Validate(options)
                 .ThrowIfInvalid();
             
-            var instance = new Producer.Producer(options, registration.Serializer ?? _defaultSerializer, s.GetRequiredService<ILoggerFactory>())
+            var instance = new Producer.Producer(
+                options, 
+                registration.Serializer ?? _defaultSerializer,
+                s.GetRequiredService<ILoggerFactory>(),
+                s.GetService<IMetricsCollector>())
             {
                 Name = registration.Name,
             };
@@ -326,7 +341,8 @@ public class Configurator
 
                     return x.Value.Item1;
                 }),
-                s.GetRequiredService<ILoggerFactory>());
+                s.GetRequiredService<ILoggerFactory>(),
+                s.GetService<IMetricsCollector>());
         });
     }
 }

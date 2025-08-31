@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using GearQueue.Metrics;
 using GearQueue.Options;
 using GearQueue.Utils;
 using Microsoft.Extensions.Logging;
@@ -8,7 +10,6 @@ namespace GearQueue.Network;
 internal interface IConnectionPool
 {
     bool IsHealthy { get; }
-    ConnectionPoolMetrics Metrics { get; }
     bool ShouldTryConnection();
     Task<IConnection> Get(CancellationToken cancellationToken = default);
     void Return(IConnection connection, bool hasError = false);
@@ -29,14 +30,12 @@ internal class ConnectionPool : IDisposable, IConnectionPool
     private readonly ServerHealthTracker _healthTracker;
     private readonly IConnectionFactory _connectionFactory;
     private readonly ITimeProvider _timeProvider;
+    private readonly IMetricsCollector? _metricsCollector;
 
     private bool _disposed;
 
     public bool IsHealthy => _healthTracker.IsHealthy;
     public bool ShouldTryConnection() => _healthTracker.ShouldTryConnection();
-
-    
-    public ConnectionPoolMetrics Metrics { get; } = new();
 
     /// <summary>
     /// Initializes a new instance of the ConnectionPool class.
@@ -45,16 +44,19 @@ internal class ConnectionPool : IDisposable, IConnectionPool
     /// <param name="loggerFactory"></param>
     /// <param name="connectionFactory"></param>
     /// <param name="timeProvider"></param>
+    /// <param name="metricsCollector"></param>
     internal ConnectionPool(ConnectionPoolOptions options, 
         ILoggerFactory loggerFactory,
         IConnectionFactory connectionFactory,
-        ITimeProvider timeProvider)
+        ITimeProvider timeProvider,
+        IMetricsCollector? metricsCollector = null)
     {
         _logger = loggerFactory.CreateLogger<ConnectionPool>();
         _options = options;
         _loggerFactory = loggerFactory;
         _connectionFactory = connectionFactory;
         _timeProvider = timeProvider;
+        _metricsCollector = metricsCollector;
         _healthTracker = new ServerHealthTracker(
             options.Host,
             options.HealthErrorThreshold, 
@@ -76,6 +78,8 @@ internal class ConnectionPool : IDisposable, IConnectionPool
     {
         ThrowIfDisposed();
 
+        var stopwatch = Stopwatch.StartNew();
+        
         if (!await _connectionsInUseSemaphore
                 .WaitAsync(_options.NewConnectionTimeout, cancellationToken)
                 .ConfigureAwait(false))
@@ -94,17 +98,17 @@ internal class ConnectionPool : IDisposable, IConnectionPool
             {
                 if ((now - connectionInfo.CreatedAt) > _options.ConnectionMaxAge)
                 {
+                    _metricsCollector?.PoolConnectionDiscarded(_options.Host.Hostname, _options.Host.Port);
                     connectionInfo.Connection.Dispose();
-                    Metrics.IncrementExpiredConnections();
                     continue;
                 }
 
-                Metrics.IncrementConnectionsReused();
                 _reservedConnections.TryAdd(connectionInfo.Connection.Id, connectionInfo);
+                _metricsCollector?.PoolConnectionReused(_options.Host.Hostname, _options.Host.Port, stopwatch.Elapsed);;
                 return connectionInfo.Connection;
             }
 
-            return await CreateNew(cancellationToken).ConfigureAwait(false);
+            return await CreateNew(cancellationToken, stopwatch).ConfigureAwait(false);
         }
         catch
         {
@@ -114,7 +118,7 @@ internal class ConnectionPool : IDisposable, IConnectionPool
         }
     }
     
-    private async Task<IConnection> CreateNew(CancellationToken cancellationToken)
+    private async Task<IConnection> CreateNew(CancellationToken cancellationToken, Stopwatch stopwatch)
     {
         var newConnectionInfo = new ConnectionInfo
         {
@@ -128,16 +132,17 @@ internal class ConnectionPool : IDisposable, IConnectionPool
         {
             await newConnectionInfo.Connection.Connect(cancellationToken)
                 .ConfigureAwait(false);
+            
+            _metricsCollector?.PoolConnectionCreated(_options.Host.Hostname, _options.Host.Port, stopwatch.Elapsed);
         }
         catch (Exception)
         {
             _reservedConnections.TryRemove(newConnectionInfo.Connection.Id, out _);
             newConnectionInfo.Connection.Dispose();
+            _metricsCollector?.PoolConnectionErrored(_options.Host.Hostname, _options.Host.Port);
             throw;
         }
         
-        Metrics.IncrementConnectionsCreated();
-
         return newConnectionInfo.Connection;
     }
     
@@ -160,6 +165,7 @@ internal class ConnectionPool : IDisposable, IConnectionPool
         if (hasError)
         {
             _healthTracker.ReportFailure();
+            _metricsCollector?.PoolConnectionErrored(_options.Host.Hostname, _options.Host.Port);
 
             if (!_healthTracker.IsHealthy)
             {
@@ -175,8 +181,8 @@ internal class ConnectionPool : IDisposable, IConnectionPool
         {
             if (hasError)
             {
+                _metricsCollector?.PoolConnectionDiscarded(_options.Host.Hostname, _options.Host.Port);
                 connection.Dispose();
-                Metrics.IncrementConnectionsDiscarded();
                 return;
             }
             
@@ -184,14 +190,13 @@ internal class ConnectionPool : IDisposable, IConnectionPool
             if ((_timeProvider.Now - connectionInfo.CreatedAt) <= _options.ConnectionMaxAge)
             {
                 _freeConnections.Enqueue(connectionInfo);
-                Metrics.IncrementConnectionsReturned();
                 return;
             }
 
             
             // Connection is invalid or too old, dispose it
+            _metricsCollector?.PoolConnectionDiscarded(_options.Host.Hostname, _options.Host.Port);
             connection.Dispose();
-            Metrics.IncrementConnectionsDiscarded();
         }
         catch
         {
@@ -204,8 +209,6 @@ internal class ConnectionPool : IDisposable, IConnectionPool
             {
                 /* Ignore */
             }
-
-            Metrics.IncrementConnectionErrors();
         }
         finally
         {

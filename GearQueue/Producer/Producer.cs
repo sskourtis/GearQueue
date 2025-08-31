@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using GearQueue.Logging;
+using GearQueue.Metrics;
 using GearQueue.Network;
 using GearQueue.Options;
 using GearQueue.Protocol;
@@ -66,46 +67,49 @@ public class Producer : IDisposable, INamedProducer
     private readonly ProducerOptions _options;
     private readonly IConnectionPool[] _connectionPools;
     private readonly IGearQueueJobSerializer? _jobSerializer;
+    private readonly IMetricsCollector? _metricsCollector;
     
     private int _distributionStrategyCounter;
-
-    public ConnectionPoolMetrics Metrics => _connectionPools.First().Metrics;
     
     public required string Name { get; init; }
 
-    public Producer(ProducerOptions options, ILoggerFactory loggerFactory)
+    public Producer(ProducerOptions options, ILoggerFactory loggerFactory, IMetricsCollector? metricsCollector = null)
     {
         _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
+        _metricsCollector = metricsCollector;
         _connectionPools = options.ConnectionPools
-            .Select(x => new ConnectionPool(x, loggerFactory, new ConnectionFactory(), new TimeProvider()))
+            .Select(x => new ConnectionPool(x, loggerFactory, new ConnectionFactory(), new TimeProvider(), metricsCollector))
             .ToArray<IConnectionPool>();
     }
     
-    public Producer(ProducerOptions options, IGearQueueJobSerializer? jobSerializer, ILoggerFactory loggerFactory)
+    public Producer(ProducerOptions options, IGearQueueJobSerializer? jobSerializer, ILoggerFactory loggerFactory, IMetricsCollector? metricsCollector = null)
     {
         _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
         _jobSerializer = jobSerializer;
+        _metricsCollector = metricsCollector;
         _connectionPools = options.ConnectionPools
-            .Select(x => new ConnectionPool(x, loggerFactory, new ConnectionFactory(), new TimeProvider()))
+            .Select(x => new ConnectionPool(x, loggerFactory, new ConnectionFactory(), new TimeProvider(), metricsCollector))
             .ToArray<IConnectionPool>();
     }
     
-    internal Producer(ProducerOptions options, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
+    internal Producer(ProducerOptions options, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory, IMetricsCollector? metricsCollector = null)
     {
         _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
+        _metricsCollector = metricsCollector;
         _connectionPools = options.ConnectionPools
             .Select(connectionPoolFactory.Create)
             .ToArray();
     }
 
-    internal Producer(ProducerOptions options, IGearQueueJobSerializer jobSerializer, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory)
+    internal Producer(ProducerOptions options, IGearQueueJobSerializer jobSerializer, IConnectionPoolFactory connectionPoolFactory, ILoggerFactory loggerFactory, IMetricsCollector? metricsCollector  = null)
     {
         _logger = loggerFactory.CreateLogger<Producer>();
         _options = options;
         _jobSerializer = jobSerializer;
+        _metricsCollector = metricsCollector;
         _connectionPools = options.ConnectionPools
             .Select(connectionPoolFactory.Create)
             .ToArray();
@@ -235,10 +239,13 @@ public class Producer : IDisposable, INamedProducer
 
             if (response is null || response.Value.Type != PacketType.JobCreated)
             {
+                _metricsCollector?.JobSubmitErrored(functionName);
                 _logger.LogUnexpectedResponseType(response?.Type, PacketType.JobCreated);
                 return false;
             }
-
+            
+            _metricsCollector?.JobSubmitted(functionName);
+            
             return response.Value.Type == PacketType.JobCreated;
         }
         catch (SocketException e)
@@ -251,6 +258,8 @@ public class Producer : IDisposable, INamedProducer
                 _connectionPools[serverIndex].Return(connection, true);
             }
             
+            _metricsCollector?.JobSubmitErrored(functionName);
+            
             return false;
         }
         catch
@@ -259,6 +268,8 @@ public class Producer : IDisposable, INamedProducer
             {
                 _connectionPools[serverIndex].Return(connection);
             }
+            
+            _metricsCollector?.JobSubmitErrored(functionName);
 
             throw;
         }

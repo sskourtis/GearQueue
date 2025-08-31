@@ -1,3 +1,4 @@
+using GearQueue.Metrics;
 using GearQueue.Protocol.Response;
 using Microsoft.Extensions.ObjectPool;
 
@@ -10,7 +11,7 @@ internal interface IBatchJobManager
     string FunctionName { get; }
 }
 
-internal class BatchJobManager(string functionName, HandlerOptions options) : IBatchJobManager
+internal class BatchJobManager(string functionName, HandlerOptions options, IMetricsCollector? metricsCollector = null) : IBatchJobManager
 {
     private static readonly ObjectPool<BatchData> BatchDataPool = new DefaultObjectPool<BatchData>(new DefaultPooledObjectPolicy<BatchData>());
     
@@ -96,6 +97,7 @@ internal class BatchJobManager(string functionName, HandlerOptions options) : IB
 
             completedBatches ??= [];
             completedBatches.Add(batch);
+            metricsCollector?.BatchedJobPreparedWithSize(functionName, batch.Key, batch.Jobs.Count);
             _pendingBatches.RemoveAt(i);
         }
 

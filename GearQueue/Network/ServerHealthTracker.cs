@@ -1,4 +1,5 @@
 using GearQueue.Logging;
+using GearQueue.Metrics;
 using GearQueue.Options;
 using Microsoft.Extensions.Logging;
 
@@ -19,18 +20,22 @@ internal sealed class ServerHealthTracker
     private readonly TimeSpan _healthCheckInterval;
     private readonly ILogger<ServerHealthTracker> _logger;
     
+    private readonly IMetricsCollector? _metricsCollector;
+    
     internal bool IsHealthy => _state == HealthStatus.Healthy;
     internal DateTimeOffset LastFailureTime { get; private set; } = DateTimeOffset.MinValue;
 
     internal ServerHealthTracker(HostOptions hostOptions, 
         int failureThreshold, 
         TimeSpan healthCheckInterval,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IMetricsCollector? metricsCollector = null)
     {
         _logger = loggerFactory.CreateLogger<ServerHealthTracker>();
         _hostOptions = hostOptions;
         _failureThreshold = failureThreshold;
         _healthCheckInterval = healthCheckInterval;
+        _metricsCollector = metricsCollector;
     }
     
     internal void ReportSuccess()
@@ -40,6 +45,7 @@ internal sealed class ServerHealthTracker
             if (_state == HealthStatus.Unhealthy)
             {
                 _logger.LogHealthyServer(_hostOptions.Hostname, _hostOptions.Port);
+                _metricsCollector?.PoolIsHealthy(_hostOptions.Hostname, _hostOptions.Port);
             }
             
             _state = HealthStatus.Healthy;
@@ -61,6 +67,7 @@ internal sealed class ServerHealthTracker
                 {
                     _logger.LogUnhealthyServer(_hostOptions.Hostname, _hostOptions.Port, _failureCount);
                     // Too many failures, mark server as unhealthy
+                    _metricsCollector?.PoolIsUnhealthy(_hostOptions.Hostname, _hostOptions.Port);;
                     _state = HealthStatus.Unhealthy;
                 }
             }

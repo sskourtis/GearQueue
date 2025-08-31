@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.Newtonsoft.Json",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.ProtoBufNet", "GearQueue.ProtoBufNet\GearQueue.ProtoBufNet.csproj", "{0ABD9760-DEC9-433C-BE3A-E1D0C52240CF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.PrometheusNet", "GearQueue.PrometheusNet\GearQueue.PrometheusNet.csproj", "{96E0615A-85BF-41F8-A35E-D2BDC768F885}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -64,6 +66,10 @@ Global
 		{0ABD9760-DEC9-433C-BE3A-E1D0C52240CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0ABD9760-DEC9-433C-BE3A-E1D0C52240CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0ABD9760-DEC9-433C-BE3A-E1D0C52240CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96E0615A-85BF-41F8-A35E-D2BDC768F885}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96E0615A-85BF-41F8-A35E-D2BDC768F885}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96E0615A-85BF-41F8-A35E-D2BDC768F885}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96E0615A-85BF-41F8-A35E-D2BDC768F885}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1B3435AF-79C5-4FBB-AD17-155F73E1D0E3} = {25FFDCCC-D779-4960-B5DF-556FC920FE82}

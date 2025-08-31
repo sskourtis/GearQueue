@@ -45,15 +45,17 @@ public class Configurator
             _services.TryAddSingleton<UnscopedHandlerExecutionMiddleware>();
         }
     }
-
-    public void SetMetricsCollector<T>() where T : class, IMetricsCollector
+    
+    public void SetMetricsCollector<T>(MetricsOptions? metricsOptions = null) where T : class, IMetricsCollector
     {
-        _services.AddSingleton<IMetricsCollector, T>();
+        _services.TryAddSingleton(metricsOptions ?? new MetricsOptions());
+        _services.TryAddSingleton<IMetricsCollector, T>();
     }
     
-    public void SetMetricsCollector(IMetricsCollector metricsCollector)
+    public void SetMetricsCollector(IMetricsCollector metricsCollector, MetricsOptions? metricsOptions = null)
     {
-        _services.AddSingleton(metricsCollector);
+        _services.TryAddSingleton(metricsOptions ?? new MetricsOptions());
+        _services.TryAddSingleton(metricsCollector);
     }
 
     public void SetDefaultSerializer(IGearQueueJobSerializer jobSerializer)

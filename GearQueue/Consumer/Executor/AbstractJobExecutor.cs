@@ -36,6 +36,7 @@ internal abstract class AbstractJobExecutor(ILoggerFactory? loggerFactory) : IJo
         var stopwatch = Stopwatch.StartNew();
         try
         {
+            metricsCollector?.JobHandlingStarted(context.FunctionName, context.IsBatch ? context.Batches.Length : 1);
             await pipeline.InvokeAsync(context);
             
             metricsCollector?.JobsHandled(context.FunctionName, context.Result ?? JobResult.PermanentFailure, stopwatch.Elapsed,

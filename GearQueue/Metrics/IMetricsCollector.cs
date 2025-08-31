@@ -12,6 +12,7 @@ public interface IMetricsCollector
     void PoolConnectionErrored(string host, int port);
     void JobSubmitted(string functionName);
     void JobSubmitErrored(string functionName);
+    void JobHandlingStarted(string functionName, int amount);
     void JobsHandled(string functionName, JobResult result, TimeSpan duration, int amount);
     void BatchedJobPreparedWithSize(string functionName, string? key, int size);
     void HandlerWaitTime(TimeSpan duration);

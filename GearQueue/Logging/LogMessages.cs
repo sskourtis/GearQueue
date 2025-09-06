@@ -9,7 +9,7 @@ internal static partial class LogMessages
     [LoggerMessage(
         Message = "Got exception while consuming jobs from gearman",
         Level = LogLevel.Error)]
-    internal static partial void LogConsumerException(
+    internal static partial void LogWorkerException(
         this ILogger logger,
         Exception exception);
     
@@ -72,24 +72,13 @@ internal static partial class LogMessages
         SocketException exception);
 
     [LoggerMessage(
-        Message = "Starting consumer to {Host} and {Port} with {Concurrency} for {Function}",
+        Message = "Starting worker to {Host} and {Port} with {Concurrency} for {Function}",
         Level = LogLevel.Information)]
-    internal static partial void LogStartingConsumer(
+    internal static partial void LogStartingWorker(
         this ILogger logger,
         string host,
         int port,
         int concurrency,
-        string function
-    );
-    
-    [LoggerMessage(
-        Message = "Starting consumer {Connections} to {Host} and {Port} with for {Function}",
-        Level = LogLevel.Information)]
-    internal static partial void LogStartingBatchConsumer(
-        this ILogger logger,
-        int connections,
-        string host,
-        int port,
         string function
     );
 

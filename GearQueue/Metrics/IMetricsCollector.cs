@@ -1,4 +1,4 @@
-using GearQueue.Consumer;
+using GearQueue.Worker;
 
 namespace GearQueue.Metrics;
 

@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using GearQueue.Consumer;
 using GearQueue.Metrics;
 using GearQueue.Options;
+using GearQueue.Worker;
 
 namespace GearQueue.PrometheusNet;
 

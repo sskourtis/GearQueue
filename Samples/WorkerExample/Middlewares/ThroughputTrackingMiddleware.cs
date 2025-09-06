@@ -1,5 +1,5 @@
-using GearQueue.Consumer;
-using GearQueue.Consumer.Pipeline;
+using GearQueue.Worker;
+using GearQueue.Worker.Pipeline;
 using SampleUtils;
 
 namespace WorkerExample.Middlewares;
@@ -8,7 +8,7 @@ public class ThroughputTrackingMiddleware(ILogger<ThroughputTrackingMiddleware> 
 {
     private static readonly InvocationsTracker InvocationsTracker = new();
     
-    public Task InvokeAsync(JobContext context, ConsumerDelegate? next = null)
+    public Task InvokeAsync(JobContext context, WorkerDelegate? next = null)
     {
         var (total, perSecond) = InvocationsTracker.InvokeAndGetInvocations();
 

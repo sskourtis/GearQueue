@@ -6,7 +6,7 @@ public static class ConnectionStringParser
 {
     private const string HostsPropertyName = "Hosts";
     
-    private static readonly string[] ConsumerHostProperties = typeof(ConsumerHostsOptions)
+    private static readonly string[] WorkerHostProperties = typeof(WorkerHostsOptions)
         .GetProperties()
         .Where(p => p.Name != "Host")
         .Select(p => p.Name)
@@ -70,27 +70,27 @@ public static class ConnectionStringParser
     }
     
     /// <summary>
-    /// Converts a GearQueue connection string to consumer options
+    /// Converts a GearQueue connection string to worker options
     /// </summary>
     /// <param name="connectionString"></param>
     /// <returns></returns>
-    public static ConsumerOptions ParseToConsumerOptions(string connectionString)
+    public static WorkerOptions ParseToWorkerOptions(string connectionString)
     {
         var configOptions = GetConfiguration(connectionString);
 
-        var options = new ConsumerOptions();
+        var options = new WorkerOptions();
 
         foreach (var option in configOptions)
         {
             if (option!.Name == HostsPropertyName)
             {
                 options.Hosts = ParseHosts(option.Value)
-                    .Select(h => new ConsumerHostsOptions
+                    .Select(h => new WorkerHostsOptions
                     {
                         Host = h
                     }).ToList();
             }
-            else if (ConsumerHostProperties.Contains(option.Name))
+            else if (WorkerHostProperties.Contains(option.Name))
             {
                 foreach (var optionsHost in options.Hosts)
                 {
@@ -110,7 +110,7 @@ public static class ConnectionStringParser
             }
         }
 
-        var validator = new ConsumerOptionsValidator();
+        var validator = new WorkerOptionsValidator();
         
         var result = validator.Validate(options);
         

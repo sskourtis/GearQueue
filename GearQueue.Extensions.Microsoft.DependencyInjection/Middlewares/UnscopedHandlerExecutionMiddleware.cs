@@ -1,12 +1,12 @@
-using GearQueue.Consumer;
-using GearQueue.Consumer.Pipeline;
+using GearQueue.Worker;
+using GearQueue.Worker.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Middlewares;
 
 internal class UnscopedHandlerExecutionMiddleware(IServiceProvider serviceProvider) : IGearQueueMiddleware
 {
-    public async Task InvokeAsync(JobContext context, ConsumerDelegate? next = null)
+    public async Task InvokeAsync(JobContext context, WorkerDelegate? next = null)
     {
         var handler = serviceProvider.GetRequiredService(context.HandlerType!) as IHandler;
 

@@ -74,14 +74,14 @@ public class ConnectionStringParserTests
     }
     
     [Fact]
-    public void ParseToConsumerOptions_ShouldSucceed_WithMultipleHosts()
+    public void ParseToWorkerOptions_ShouldSucceed_WithMultipleHosts()
     {
         // Arrange
         var connectionString =
             "Hosts=gearman-host:4731,gearman-host2:4732;MaxConcurrency=10;ConcurrencyStrategy=PerConnection;Connections=10;ReconnectTimeout=00:00:02;ReceiveTimeout=00:20:00";
         
         // Act
-        var options = ConnectionStringParser.ParseToConsumerOptions(connectionString);
+        var options = ConnectionStringParser.ParseToWorkerOptions(connectionString);
         
         // Assert
         Assert.NotNull(options);
@@ -105,14 +105,14 @@ public class ConnectionStringParserTests
     }
     
     [Fact]
-    public void ParseToConsumerOptions_ShouldSucceed_WithMultipleHostsAndExtraSpaces()
+    public void ParseToWorkerOptions_ShouldSucceed_WithMultipleHostsAndExtraSpaces()
     {
         // Arrange
         var connectionString =
             "Hosts = gearman-host:4731  ,  gearman-host2:4732 ;  MaxConcurrency=10  ;  ConcurrencyStrategy = PerConnection ;  Connections  = 10 ;  ReconnectTimeout=  00:00:02 ";
         
         // Act
-        var options = ConnectionStringParser.ParseToConsumerOptions(connectionString);
+        var options = ConnectionStringParser.ParseToWorkerOptions(connectionString);
         
         // Assert
         Assert.NotNull(options);

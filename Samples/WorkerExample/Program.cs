@@ -14,7 +14,7 @@ builder.Services.AddGearQueue(g =>
     g.SetDefaultSerializer(new GearQueueJsonJobSerializer());
     g.SetMetricsCollector<PrometheusMetricsCollector>();
     
-    g.AddConsumer(builder.Configuration.GetConnectionString("Consumer"))
+    g.AddWorker(builder.Configuration.GetConnectionString("Worker"))
         .SetHandler<ExampleHandler>("test-function", ServiceLifetime.Singleton)
         .SetHandler<ExampleHandler>("test-function-2", ServiceLifetime.Singleton)
         .SetBatchHandler<ExampleBatchHandler>("test-batch-function", new BatchOptions

@@ -1,12 +1,12 @@
-using GearQueue.Consumer;
-using GearQueue.Consumer.Pipeline;
+using GearQueue.Worker;
+using GearQueue.Worker.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Middlewares;
 
 internal class ScopedHandlerExecutionMiddleware(IServiceScopeFactory serviceScopeFactory) : IGearQueueMiddleware
 {
-    public async Task InvokeAsync(JobContext context, ConsumerDelegate? next = null)
+    public async Task InvokeAsync(JobContext context, WorkerDelegate? next = null)
     {
         using var scope = serviceScopeFactory.CreateScope();
 

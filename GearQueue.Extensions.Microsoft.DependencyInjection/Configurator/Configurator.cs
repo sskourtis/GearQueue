@@ -1,5 +1,4 @@
 using System.Reflection;
-using GearQueue.Consumer;
 using GearQueue.Extensions.Microsoft.DependencyInjection.Middlewares;
 using GearQueue.Metrics;
 using GearQueue.Options;
@@ -7,6 +6,7 @@ using GearQueue.Options.Parser;
 using GearQueue.Options.Validation;
 using GearQueue.Producer;
 using GearQueue.Serialization;
+using GearQueue.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -22,9 +22,9 @@ public class Configurator
     private readonly IServiceCollection _services;
 
     private Action<ProducerOptions>? _defaultProducerOptions;
-    private Action<ConsumerOptions>? _defaultConsumerOptions;
+    private Action<WorkerOptions>? _defaultWorkerOptions;
     
-    private readonly List<ConsumerRegistration> _consumerRegistrations = new();
+    private readonly List<WorkerRegistration> _workerRegistrations = new();
     
     internal Configurator(IServiceCollection services)
     {
@@ -33,12 +33,12 @@ public class Configurator
 
     internal void Setup()
     {
-        foreach (var consumerRegistration in _consumerRegistrations)
+        foreach (var registration in _workerRegistrations)
         {
-            AddConsumer(consumerRegistration);
+            AddWorker(registration);
         }
 
-        if (_consumerRegistrations.Count > 0)
+        if (_workerRegistrations.Count > 0)
         {
             _services.AddHostedService<GearQueueHostedService>();
             _services.TryAddSingleton<ScopedHandlerExecutionMiddleware>();
@@ -67,9 +67,9 @@ public class Configurator
         _defaultProducerOptions = options;
     }
 
-    public void SetDefaultConsumerOptions(Action<ConsumerOptions> options)
+    public void SetDefaultWorkerOptions(Action<WorkerOptions> options)
     {
-        _defaultConsumerOptions = options;
+        _defaultWorkerOptions = options;
     }
 
     public void AddProducer(string connectionString, Action<ProducerOptions>? configure = null, IGearQueueJobSerializer? serializer = null)
@@ -245,48 +245,48 @@ public class Configurator
         }
     }
 
-    public ConsumerConfigurator AddConsumer(Action<ConsumerOptions> configure)
+    public WorkerConfigurator AddWorker(Action<WorkerOptions> configure)
     {
-        var registration = new ConsumerRegistration
+        var registration = new WorkerRegistration
         {
             ConfigureOptions = configure,
-            PipelineBuilder = new ConsumerPipelineBuilder(_services)
+            PipelineBuilder = new WorkerPipelineBuilder(_services)
         };
         
-        _consumerRegistrations.Add(registration);
+        _workerRegistrations.Add(registration);
         
-        return new ConsumerConfigurator(registration);
+        return new WorkerConfigurator(registration);
     }
 
-    public ConsumerConfigurator AddConsumer(IConfigurationSection section, Action<ConsumerOptions>? configure = null)
+    public WorkerConfigurator AddWorker(IConfigurationSection section, Action<WorkerOptions>? configure = null)
     {
-        var registration = new ConsumerRegistration
+        var registration = new WorkerRegistration
         {
             ConfigureOptions = configure,
             Section = section,
-            PipelineBuilder = new ConsumerPipelineBuilder(_services)
+            PipelineBuilder = new WorkerPipelineBuilder(_services)
         };
         
-        _consumerRegistrations.Add(registration);
+        _workerRegistrations.Add(registration);
         
-        return new ConsumerConfigurator(registration);
+        return new WorkerConfigurator(registration);
     }
     
-    public ConsumerConfigurator AddConsumer(string? connectionString, Action<ConsumerOptions>? configure = null)
+    public WorkerConfigurator AddWorker(string? connectionString, Action<WorkerOptions>? configure = null)
     {
-        var registration = new ConsumerRegistration
+        var registration = new WorkerRegistration
         {
             ConfigureOptions = configure,
             ConnectionString = connectionString,
-            PipelineBuilder = new ConsumerPipelineBuilder(_services)
+            PipelineBuilder = new WorkerPipelineBuilder(_services)
         };
         
-        _consumerRegistrations.Add(registration);
+        _workerRegistrations.Add(registration);
         
-        return new ConsumerConfigurator(registration);
+        return new WorkerConfigurator(registration);
     }
     
-    private void AddConsumer(ConsumerRegistration registration)
+    private void AddWorker(WorkerRegistration registration)
     {
         var uniqueName = Guid.NewGuid().ToString();
         
@@ -297,32 +297,32 @@ public class Configurator
 
         if (registration.Section is not null)
         {
-            _services.Configure<ConsumerOptions>(uniqueName, registration.Section);    
+            _services.Configure<WorkerOptions>(uniqueName, registration.Section);    
         }
         
-        _services.AddSingleton<IConsumer>(s =>
+        _services.AddSingleton<IWorker>(s =>
         {
-            ConsumerOptions options;
+            WorkerOptions options;
 
             if (registration.Section is not null)
             {
-                var optionsMonitor = s.GetRequiredService<IOptionsMonitor<ConsumerOptions>>();
+                var optionsMonitor = s.GetRequiredService<IOptionsMonitor<WorkerOptions>>();
 
                 options = optionsMonitor.Get(uniqueName);    
             }
             else if (registration.ConnectionString is not null)
             {
-                options = ConnectionStringParser.ParseToConsumerOptions(registration.ConnectionString);
+                options = ConnectionStringParser.ParseToWorkerOptions(registration.ConnectionString);
             }
             else
             {
-                options = new ConsumerOptions();
+                options = new WorkerOptions();
             }
             
-            _defaultConsumerOptions?.Invoke(options);
+            _defaultWorkerOptions?.Invoke(options);
             registration.ConfigureOptions?.Invoke(options);
             
-            new ConsumerOptionsValidator()
+            new WorkerOptionsValidator()
                 .Validate(options)
                 .ThrowIfInvalid();
             
@@ -331,7 +331,7 @@ public class Configurator
                 throw new ArgumentException("There must be at least one handler mapping");
             }
            
-            return new Consumer.Consumer(
+            return new Worker.Worker(
                 options,
                 options.CreateScope 
                     ? registration.PipelineBuilder.Build<ScopedHandlerExecutionMiddleware>(s)

@@ -2,25 +2,25 @@ namespace GearQueue.Worker;
 
 public interface IHandler
 {
-    Task<JobResult> Consume(JobContext context);
+    Task<JobResult> Handle(JobContext context);
 }
 
 public abstract class AbstractHandler<T> : IHandler where T : class
 {
-    public abstract Task<JobResult> Consume(T job, JobContext context);
+    public abstract Task<JobResult> Handle(T job, JobContext context);
     
-    public Task<JobResult> Consume(JobContext context)
+    public Task<JobResult> Handle(JobContext context)
     {
-        return Consume(context.ToJob<T>(), context);
+        return Handle(context.ToJob<T>(), context);
     }
 }
 
 public abstract class AbstractBatchHandler<T> : IHandler where T : class
 {
-    public abstract Task<JobResult> Consume(IEnumerable<T> job, JobContext context);
+    public abstract Task<JobResult> Handle(IEnumerable<T> job, JobContext context);
     
-    public Task<JobResult> Consume(JobContext context)
+    public Task<JobResult> Handle(JobContext context)
     {
-        return Consume(context.Batches.Select(b => b.ToJob<T>()), context);
+        return Handle(context.Batches.Select(b => b.ToJob<T>()), context);
     }
 }

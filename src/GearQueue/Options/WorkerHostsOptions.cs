@@ -8,8 +8,7 @@ public sealed class WorkerHostsOptions
     public required HostOptions Host { get; init; }
     
     /// <summary>
-    /// Defines the number of parallel jobs to be executed in parallel.
-    /// Each extra worker will create its own connection to the gearman job server
+    /// Defines the number of connections to be used for this host
     /// </summary>
     public int Connections { get; set; } = 1;
     

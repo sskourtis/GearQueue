@@ -7,7 +7,7 @@ public class SecondaryExampleHandler(ILogger<SecondaryExampleHandler> logger) : 
 {
     private readonly InvocationsTracker _invocationsTracker = new();
     
-    public Task<JobResult> Consume(JobContext context)
+    public Task<JobResult> Handle(JobContext context)
     {
         var (total, perSecond) = _invocationsTracker.InvokeAndGetInvocations();
 

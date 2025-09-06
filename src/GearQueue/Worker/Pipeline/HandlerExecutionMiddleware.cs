@@ -23,7 +23,7 @@ public class HandlerExecutionMiddleware(ILoggerFactory loggerFactory) : IGearQue
             return;
         }
 
-        var result = await handler.Consume(context);
+        var result = await handler.Handle(context);
         context.SetResult(result);
     }
 }

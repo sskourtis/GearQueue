@@ -16,7 +16,7 @@ internal class UnscopedHandlerExecutionMiddleware(IServiceProvider serviceProvid
             return;
         }
 
-        var result = await handler.Consume(context);
+        var result = await handler.Handle(context);
         context.SetResult(result);
     }
 }

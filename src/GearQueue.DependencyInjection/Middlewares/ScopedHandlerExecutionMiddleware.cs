@@ -16,7 +16,7 @@ internal class ScopedHandlerExecutionMiddleware(IServiceScopeFactory serviceScop
             return;
         }
 
-        var result = await handler.Consume(context);
+        var result = await handler.Handle(context);
         context.SetResult(result);
     }
 }

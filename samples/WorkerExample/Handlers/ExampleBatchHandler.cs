@@ -5,7 +5,7 @@ namespace WorkerExample.Handlers;
 
 public class ExampleBatchHandler(ILogger<ExampleBatchHandler> logger) : AbstractBatchHandler<JobContract>
 {
-    public override Task<JobResult> Consume(IEnumerable<JobContract> jobs, JobContext context)
+    public override Task<JobResult> Handle(IEnumerable<JobContract> jobs, JobContext context)
     {
         var jobList = jobs.ToList();
         

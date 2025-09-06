@@ -5,6 +5,9 @@ It provides fully asynchronous APIs, efficient connection pooling, and flexible 
 
 [Documentation](https://github.com/StavrosSkourtis/GearQueue/wiki)
 
+> [!WARNING]  
+> While there are no known issues, GearQueue is very new and has not been tested in production yet.
+
 ---
 
 ## HighLights

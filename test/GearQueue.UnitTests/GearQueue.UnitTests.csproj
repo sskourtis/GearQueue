@@ -38,7 +38,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\GearQueue\GearQueue.csproj" />
+      <ProjectReference Include="..\..\src\GearQueue\GearQueue.csproj" />
     </ItemGroup>
 
 </Project>

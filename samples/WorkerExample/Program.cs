@@ -1,5 +1,5 @@
 using System.Text;
-using GearQueue.Extensions.Microsoft.DependencyInjection;
+using GearQueue.DependencyInjection;
 using GearQueue.Options;
 using GearQueue.PrometheusNet;
 using GearQueue.Serialization;

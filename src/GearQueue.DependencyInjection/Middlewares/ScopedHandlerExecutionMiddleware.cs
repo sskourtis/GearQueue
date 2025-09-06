@@ -2,15 +2,15 @@ using GearQueue.Worker;
 using GearQueue.Worker.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection.Middlewares;
+namespace GearQueue.DependencyInjection.Middlewares;
 
-internal class UnscopedHandlerExecutionMiddleware(IServiceProvider serviceProvider) : IGearQueueMiddleware
+internal class ScopedHandlerExecutionMiddleware(IServiceScopeFactory serviceScopeFactory) : IGearQueueMiddleware
 {
     public async Task InvokeAsync(JobContext context, WorkerDelegate? next = null)
     {
-        var handler = serviceProvider.GetRequiredService(context.HandlerType!) as IHandler;
+        using var scope = serviceScopeFactory.CreateScope();
 
-        if (handler is null)
+        if (scope.ServiceProvider.GetRequiredService(context.HandlerType!) is not IHandler handler)
         {
             context.SetResult(JobResult.PermanentFailure);
             return;

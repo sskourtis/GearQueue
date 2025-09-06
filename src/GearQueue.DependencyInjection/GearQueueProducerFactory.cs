@@ -1,6 +1,6 @@
 using GearQueue.Producer;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection;
+namespace GearQueue.DependencyInjection;
 
 public interface IProducerFactory
 {

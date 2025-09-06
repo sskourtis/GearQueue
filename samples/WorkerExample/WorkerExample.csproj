@@ -15,7 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\GearQueue.Extensions.Microsoft.DependencyInjection\GearQueue.Extensions.Microsoft.DependencyInjection.csproj" />
+      <ProjectReference Include="..\..\src\GearQueue.DependencyInjection\GearQueue.DependencyInjection.csproj" />
       <ProjectReference Include="..\..\src\GearQueue.Newtonsoft.Json\GearQueue.Newtonsoft.Json.csproj" />
       <ProjectReference Include="..\..\src\GearQueue.PrometheusNet\GearQueue.PrometheusNet.csproj" />
       <ProjectReference Include="..\..\src\GearQueue\GearQueue.csproj" />

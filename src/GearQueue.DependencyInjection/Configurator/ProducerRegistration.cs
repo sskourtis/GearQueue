@@ -2,7 +2,7 @@ using GearQueue.Options;
 using GearQueue.Serialization;
 using Microsoft.Extensions.Configuration;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
+namespace GearQueue.DependencyInjection.Configurator;
 
 internal class ProducerRegistration
 {

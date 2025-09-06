@@ -1,7 +1,7 @@
 using GearQueue.Worker;
 using Microsoft.Extensions.Hosting;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection;
+namespace GearQueue.DependencyInjection;
 
 public class GearQueueHostedService(IEnumerable<IWorker> workers) : BackgroundService
 {

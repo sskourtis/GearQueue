@@ -3,7 +3,7 @@ using GearQueue.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
+namespace GearQueue.DependencyInjection.Configurator;
 
 internal class WorkerRegistration
 {

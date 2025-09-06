@@ -1,7 +1,7 @@
-using GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
+using GearQueue.DependencyInjection.Configurator;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection;
+namespace GearQueue.DependencyInjection;
 
 public static class GearQueueExtensions
 {

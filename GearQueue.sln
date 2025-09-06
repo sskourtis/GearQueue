@@ -17,7 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Source", "Source", "{F0167C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue", "src\GearQueue\GearQueue.csproj", "{F8D65EDE-5049-4DF6-9C82-C91C23CCEAD2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.Extensions.Microsoft.DependencyInjection", "src\GearQueue.Extensions.Microsoft.DependencyInjection\GearQueue.Extensions.Microsoft.DependencyInjection.csproj", "{081A40F2-02DA-4D6F-910F-F9055E6BEAA6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.DependencyInjection", "src\GearQueue.DependencyInjection\GearQueue.DependencyInjection.csproj", "{081A40F2-02DA-4D6F-910F-F9055E6BEAA6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GearQueue.Newtonsoft.Json", "src\GearQueue.Newtonsoft.Json\GearQueue.Newtonsoft.Json.csproj", "{51A21DD3-4EFE-40D2-8B97-4591947BA519}"
 EndProject

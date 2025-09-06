@@ -2,7 +2,7 @@ using GearQueue.Worker.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
+namespace GearQueue.DependencyInjection.Configurator;
 
 public class WorkerPipelineBuilder(IServiceCollection serviceCollection)
 {

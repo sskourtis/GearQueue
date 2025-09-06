@@ -1,5 +1,5 @@
 using System.Reflection;
-using GearQueue.Extensions.Microsoft.DependencyInjection.Middlewares;
+using GearQueue.DependencyInjection.Middlewares;
 using GearQueue.Metrics;
 using GearQueue.Options;
 using GearQueue.Options.Parser;
@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ProducerOptions = GearQueue.Options.ProducerOptions;
 
-namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
+namespace GearQueue.DependencyInjection.Configurator;
 
 public class Configurator
 {

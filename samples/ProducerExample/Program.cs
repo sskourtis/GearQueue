@@ -1,6 +1,6 @@
 using System.Reflection;
 using System.Text;
-using GearQueue.Extensions.Microsoft.DependencyInjection;
+using GearQueue.DependencyInjection;
 using GearQueue.Producer;
 using GearQueue.PrometheusNet;
 using GearQueue.Serialization;

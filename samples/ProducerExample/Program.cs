@@ -27,8 +27,6 @@ builder.Services.AddGearQueue(g =>
     g.RegisterTypedProducerFromAssembly(Assembly.GetAssembly(typeof(JobContract))!);
 });
 
-builder.Services.AddSingleton<JobCounter>();
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -48,10 +46,8 @@ app.UseWhen(
 
 app.MapMetrics();
 
-app.MapGet("/test", () => Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}") )
-    .WithName("Test");
 
-app.MapGet("/produce/{name}", async (IProducerFactory factory, JobCounter counter, string name) =>
+app.MapGet("/produce/{name}", async (IProducerFactory factory, string name) =>
     {
         var producer = factory.Get(name);
 
@@ -62,33 +58,19 @@ app.MapGet("/produce/{name}", async (IProducerFactory factory, JobCounter counte
         
         var result = await producer.Produce("test-function", Encoding.UTF8.GetBytes($"Test {Guid.NewGuid()}"));
 
-        if (result)
-        {
-            counter.Increment();
-            
-            return Results.Ok("Ok");
-        }
-
-        return Results.InternalServerError();
+        return result ? Results.Ok("Ok") : Results.InternalServerError();
     })
     .WithName("Produce from factory");
 
-app.MapGet("/produce", async (IProducer<JobContract> producer, JobCounter counter) =>
+app.MapGet("/produce", async (IProducer<JobContract> producer) =>
     {
         var result = await producer.Produce(new JobContract { TestValue = $"Test {Guid.NewGuid():N}" });
 
-        if (result)
-        {
-            counter.Increment();
-            
-            return Results.Ok("Ok");
-        }
-
-        return Results.InternalServerError();
+        return result ? Results.Ok("Ok") : Results.InternalServerError();
     })
     .WithName("Produce");
 
-app.MapGet("/produce-batch", async (IProducer producer, JobCounter counter, [FromQuery] string? key) =>
+app.MapGet("/produce-batch", async (IProducer producer, [FromQuery] string? key) =>
     {
         var result = await producer.Produce("test-batch-function", 
             new JobContract
@@ -100,18 +82,11 @@ app.MapGet("/produce-batch", async (IProducer producer, JobCounter counter, [Fro
                 BatchKey = key,
             });
 
-        if (result)
-        {
-            counter.Increment();
-            
-            return Results.Ok("Ok");
-        }
-
-        return Results.InternalServerError();
+        return result ? Results.Ok("Ok") : Results.InternalServerError();
     })
     .WithName("Produce Batch");
 
-app.MapGet("/produce-random", async (IProducer producer, JobCounter counter) =>
+app.MapGet("/produce-random", async (IProducer producer) =>
     {
         var result = await producer.Produce(Random.Shared.Next(0, 3) switch
         {
@@ -120,39 +95,8 @@ app.MapGet("/produce-random", async (IProducer producer, JobCounter counter) =>
             _ => "test-batch-function",
         }, new JobContract { TestValue = $"Test {Guid.NewGuid():N}" });
 
-        if (result)
-        {
-            counter.Increment();
-            
-            return Results.Ok("Ok");
-        }
-
-        return Results.InternalServerError();
+        return result ? Results.Ok("Ok") : Results.InternalServerError();
     })
     .WithName("Produce Random");
 
-app.MapGet("/status", (IProducer producer, JobCounter counter) =>
-    {
-        return Task.FromResult(new
-        {
-            Coutner = counter.Get(),
-        });
-    })
-    .WithName("Status");
-
 app.Run();
-
-public class JobCounter
-{
-    private int _counter = 0;
-
-    public void Increment()
-    {
-        Interlocked.Increment(ref _counter);
-    }
-
-    public int Get()
-    {
-        return Volatile.Read(ref _counter);
-    }
-}

@@ -12,7 +12,12 @@ internal sealed class ServerHealthTracker
     // State
     private HealthStatus _state = HealthStatus.Healthy;
     private int _failureCount = 0;
+
+#if NET9_0_OR_GREATER
     private readonly Lock _stateLock = new();
+#else
+    private readonly object _stateLock = new();
+#endif
     
     // Configuration
     private readonly HostOptions _hostOptions;

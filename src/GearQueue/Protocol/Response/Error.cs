@@ -1,11 +1,11 @@
 namespace GearQueue.Protocol.Response;
 
-public class Error
+internal class Error
 {
     public required string ErrorCode { get; init; }
     public required string ErrorText { get; init; }
     
-    public static Error Create(byte[] packetData)
+    internal static Error Create(byte[] packetData)
     {
         ReadOnlySpan<byte> span = packetData;
 

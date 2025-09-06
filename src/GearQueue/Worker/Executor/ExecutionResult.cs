@@ -1,6 +1,6 @@
 namespace GearQueue.Worker.Executor;
 
-public readonly struct ExecutionResult
+internal readonly struct ExecutionResult
 {
     public JobResult? ResultingStatus { get; private init; }
     public TimeSpan? MaximumSleepDelay { get; private init; }

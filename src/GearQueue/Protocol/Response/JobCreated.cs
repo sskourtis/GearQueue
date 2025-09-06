@@ -1,10 +1,10 @@
 namespace GearQueue.Protocol.Response;
 
-public class JobCreated
+internal class JobCreated
 {
     public required string JobHandle { get; init; }
     
-    public static JobCreated Create(byte[] packetData)
+    internal static JobCreated Create(byte[] packetData)
     {
         ReadOnlySpan<byte> span = packetData;
 

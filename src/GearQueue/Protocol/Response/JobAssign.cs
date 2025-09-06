@@ -1,6 +1,6 @@
 namespace GearQueue.Protocol.Response;
 
-public class JobAssign
+internal class JobAssign
 {
     private readonly int _dataOffset;
     private readonly byte[] _packetData;
@@ -22,7 +22,7 @@ public class JobAssign
         _dataOffset = dataOffset;
     }
     
-    public static JobAssign Create(byte[] packetData)
+    internal static JobAssign Create(byte[] packetData)
     {
         ReadOnlySpan<byte> span = packetData;
 
@@ -36,7 +36,7 @@ public class JobAssign
         };
     }
     
-    public static JobAssign CreateUniq(byte[] packetData)
+    internal static JobAssign CreateUniq(byte[] packetData)
     {
         ReadOnlySpan<byte> span = packetData;
 
@@ -55,7 +55,7 @@ public class JobAssign
         };
     }
     
-    public static JobAssign CreateAll(byte[] packetData)
+    internal static JobAssign CreateAll(byte[] packetData)
     {
         ReadOnlySpan<byte> span = packetData;
 

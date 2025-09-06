@@ -7,7 +7,14 @@ public class ExampleBatchHandler(ILogger<ExampleBatchHandler> logger) : Abstract
 {
     public override Task<JobResult> Consume(IEnumerable<JobContract> jobs, JobContext context)
     {
-        logger.LogInformation("Consuming batch job {Job} for {Key}", jobs.Count(), context.BatchKey ?? "-");
+        var jobList = jobs.ToList();
+        
+        logger.LogInformation("Consuming batch job {Size} for {Key}", jobList.Count, context.BatchKey ?? "-");
+
+        foreach (var job in jobList)
+        {
+            logger.LogInformation("Got Job {data}", job.TestValue);
+        }
 
         return Task.FromResult(JobResult.Success);
     }

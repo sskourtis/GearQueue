@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
 
-public class WorkerRegistration
+internal class WorkerRegistration
 {
     public Dictionary<string, (HandlerOptions, ServiceLifetime)> HandlerMapping { get; set; } = new();
     public IConfigurationSection? Section { get; set; }

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace GearQueue.Extensions.Microsoft.DependencyInjection.Configurator;
 
-public class ProducerRegistration
+internal class ProducerRegistration
 {
     public required string Name { get; set; }
     public IConfigurationSection? Section { get; set; }

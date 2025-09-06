@@ -9,7 +9,7 @@ namespace GearQueue.UnitTests.Worker;
 
 public static class JobContextUtils
 {
-    public static JobAssign CreateJobAssign(string? functionName = null)
+    internal static JobAssign CreateJobAssign(string? functionName = null)
     {
         var handle = $"job_handle_{RandomData.GetString(5)}";
         functionName ??= $"function_name_{RandomData.GetString(5)}";
@@ -21,7 +21,7 @@ public static class JobContextUtils
         return JobAssign.Create(packetData.ToArray());
     }
     
-    public static JobAssign CreateJobAssignWithKey(string? functionName, string key)
+    internal static JobAssign CreateJobAssignWithKey(string? functionName, string key)
     {
         var handle = $"job_handle_{RandomData.GetString(5)}";
         var uniqueId = UniqueId.Create(RandomData.GetString(2), key);

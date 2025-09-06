@@ -1,0 +1,13 @@
+<Project>
+    <PropertyGroup>
+        <Authors>GearQueue</Authors>
+        <RepositoryUrl>https://github.com/sskourtis/GearQueue</RepositoryUrl>
+        <PackageTags>queue;gearman;csharp</PackageTags>
+        <Description>High-performance queue library for Gearman Job Server.</Description>
+        <PackageReadmeFile>nuget.README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\nuget.README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+</Project>

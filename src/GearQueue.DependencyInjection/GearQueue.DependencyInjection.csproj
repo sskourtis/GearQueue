@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
         <LangVersion>13</LangVersion>
+        <PackageId>GearQueue.DependencyInjection</PackageId>
     </PropertyGroup>
 
     <ItemGroup>

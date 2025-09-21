@@ -71,6 +71,9 @@ builder.Services.AddGearQueue(g =>
     
     g.AddWorker("Hosts=localhost:4730; MaxConcurrency=10; Connections=1")
         .SetHandler<SampleHandler>("test-function", ServiceLifetime.Singleton);
+    
+    // It will find all classes with [GearQueueJob] attribute and register them as typed producers
+    g.RegisterTypedProducerFromAssembly(Assembly.GetAssembly(typeof(Program)));
 });
 ```
 
